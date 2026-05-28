@@ -1,0 +1,15 @@
+﻿# Python
+.env
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
+
+# Local logs
+*.log
+logs/

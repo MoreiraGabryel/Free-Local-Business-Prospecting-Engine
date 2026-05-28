@@ -1,0 +1,97 @@
+﻿:root {
+  --bg: #0c1016;
+  --surface: #141b25;
+  --surface-alt: #1a2430;
+  --text: #e8edf5;
+  --muted: #a7b2c4;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #2fbf9a;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Inter", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #1a2b3f 0%, var(--bg) 44%);
+  padding: 32px 16px;
+}
+
+.app-shell {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  background: linear-gradient(160deg, var(--surface), var(--surface-alt));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(20px, 4vw, 36px);
+}
+
+.header h1 {
+  margin: 6px 0 10px;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+.status-card {
+  margin-top: 26px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(14, 19, 28, 0.55);
+}
+
+.status-card p {
+  margin: 0;
+  color: #d2deef;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 6px rgba(47, 191, 154, 0.2);
+}
+
+.footer-note {
+  margin-top: 32px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: 18px 12px;
+  }
+
+  .status-card {
+    align-items: flex-start;
+  }
+}
