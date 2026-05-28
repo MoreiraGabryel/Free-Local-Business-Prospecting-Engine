@@ -1,8 +1,6 @@
 # Local Rush
 
-<p align="center">
-  <img src="./screenshots/banner.png" width="100%" alt="Local Rush Banner">
-</p>
+<img src="./banner.png" width="100%" alt="Local Rush Banner">
 
 <p align="center">
   <strong>Local business prospecting using OpenStreetMap + Overpass API.</strong>
