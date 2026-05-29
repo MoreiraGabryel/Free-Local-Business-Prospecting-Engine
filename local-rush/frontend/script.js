@@ -1,5 +1,7 @@
 ﻿const form = document.getElementById("search-form");
 const geoButton = document.getElementById("geo-button");
+const locationQueryInput = document.getElementById("location-query");
+const locationQueryButton = document.getElementById("location-query-button");
 const searchButton = document.getElementById("search-button");
 const statusMessage = document.getElementById("status-message");
 const errorMessage = document.getElementById("error-message");
@@ -40,15 +42,22 @@ const DEFAULT_FALLBACK = {
 const GEO_ATTEMPTS = [
   {
     enableHighAccuracy: false,
-    timeout: 9000,
-    maximumAge: 600000,
+    timeout: 20000,
+    maximumAge: 3600000,
   },
   {
     enableHighAccuracy: true,
-    timeout: 18000,
+    timeout: 35000,
     maximumAge: 0,
   },
 ];
+
+const RADIUS_LEVELS = {
+  small: 800,
+  medium: 1500,
+  high: 3000,
+  max: 5000,
+};
 
 function readList(key) {
   try {
@@ -144,6 +153,9 @@ function setLoading(loading) {
   isLoading = loading;
   searchButton.disabled = loading;
   geoButton.disabled = loading;
+  if (locationQueryButton) {
+    locationQueryButton.disabled = loading;
+  }
   searchButton.textContent = loading ? "Buscando..." : "Buscar empresas";
 }
 
@@ -609,6 +621,40 @@ function setFieldChecked(name, checked) {
   }
 }
 
+function normalizeRadiusLevel(rawLevel) {
+  const level = String(rawLevel || "").trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(RADIUS_LEVELS, level)) {
+    return level;
+  }
+  return "medium";
+}
+
+function radiusFromLevel(rawLevel) {
+  const level = normalizeRadiusLevel(rawLevel);
+  return RADIUS_LEVELS[level];
+}
+
+function levelFromRadius(radius) {
+  const value = Number(radius);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "medium";
+  }
+
+  if (value <= 1000) {
+    return "small";
+  }
+
+  if (value <= 2200) {
+    return "medium";
+  }
+
+  if (value <= 3600) {
+    return "high";
+  }
+
+  return "max";
+}
+
 function applyCoordinates(lat, lng) {
   setFieldValue("lat", Number(lat).toFixed(6));
   setFieldValue("lng", Number(lng).toFixed(6));
@@ -676,15 +722,17 @@ function applyGeolocationFallback(reason) {
 
   if (lastGeo) {
     applyCoordinates(lastGeo.lat, lastGeo.lng);
+    setFieldValue("location_query", "Ultima localizacao valida");
     setError("");
     setStatus(`${reason} Usando sua última localização válida salva.`);
     return;
   }
 
   applyCoordinates(DEFAULT_FALLBACK.lat, DEFAULT_FALLBACK.lng);
+  setFieldValue("location_query", DEFAULT_FALLBACK.label);
   setError("");
   setStatus(
-    `${reason} Aplicamos ${DEFAULT_FALLBACK.label} como ponto inicial para você buscar agora.`,
+    `${reason} Aplicamos ${DEFAULT_FALLBACK.label} como ponto inicial. Se preferir, digite cidade/CEP e aplique o local informado.`,
   );
 }
 
@@ -698,10 +746,14 @@ function loadHistoryPayload(index) {
 
   setFieldValue("lat", entry.payload.lat);
   setFieldValue("lng", entry.payload.lng);
-  setFieldValue("radius", entry.payload.radius);
+  setFieldValue(
+    "radius_level",
+    normalizeRadiusLevel(entry.payload.radius_level || levelFromRadius(entry.payload.radius)),
+  );
   setFieldValue("category", entry.payload.category);
   setFieldValue("limit", entry.payload.limit);
   setFieldChecked("only_with_site", entry.payload.only_with_site);
+  setFieldValue("location_query", entry.payload.location_query || "");
 
   setError("");
   setStatus("Filtros do histórico carregados no formulário.");
@@ -756,13 +808,68 @@ function handleSaveOrRemoveCompany(companyId, action) {
   }
 }
 
+async function handleLocationQuery() {
+  if (isLoading) {
+    return;
+  }
+
+  clearMessages();
+  const rawQuery = String(form.elements.namedItem("location_query")?.value || "").trim();
+
+  if (rawQuery.length < 3) {
+    setError("Digite uma cidade, bairro ou CEP com pelo menos 3 caracteres.");
+    return;
+  }
+
+  setLoading(true);
+  setStatus("Procurando local informado...");
+
+  try {
+    const response = await fetch("/api/geocode", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: rawQuery }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      const detail =
+        typeof data.detail === "string"
+          ? data.detail
+          : "Nao foi possivel localizar esse ponto agora.";
+      throw new Error(detail);
+    }
+
+    const lat = Number(data.lat);
+    const lng = Number(data.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new Error("Local encontrado sem coordenadas validas.");
+    }
+
+    applyCoordinates(lat, lng);
+    saveLastGeolocation(lat, lng);
+    setFieldValue("location_query", String(data.display_name || rawQuery));
+    setStatus(`Local aplicado: ${String(data.display_name || rawQuery)}.`);
+  } catch (error) {
+    console.error("[local-rush] Erro ao resolver localizacao:", error);
+    setError(error instanceof Error ? error.message : "Erro inesperado ao resolver local.");
+  } finally {
+    setLoading(false);
+  }
+}
+
 function parsePayload() {
   const formData = new FormData(form);
+  const radiusLevel = normalizeRadiusLevel(formData.get("radius_level"));
 
   return {
     lat: Number(formData.get("lat")),
     lng: Number(formData.get("lng")),
-    radius: Number(formData.get("radius")),
+    radius: radiusFromLevel(radiusLevel),
+    radius_level: radiusLevel,
+    location_query: String(formData.get("location_query") || "").trim(),
     category: String(formData.get("category") || "").trim(),
     limit: Number(formData.get("limit")),
     only_with_site: formData.get("only_with_site") === "on",
@@ -778,9 +885,17 @@ async function handleSubmit(event) {
 
   clearMessages();
   const payload = parsePayload();
+  const apiPayload = {
+    lat: payload.lat,
+    lng: payload.lng,
+    radius: payload.radius,
+    category: payload.category,
+    limit: payload.limit,
+    only_with_site: payload.only_with_site,
+  };
 
   if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) {
-    setError("Preencha latitude e longitude com valores numéricos válidos.");
+    setError("Defina uma localizacao valida antes de buscar.");
     return;
   }
 
@@ -793,7 +908,7 @@ async function handleSubmit(event) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(apiPayload),
     });
 
     const data = await response.json();
@@ -838,7 +953,7 @@ async function handleGeolocation() {
       const permission = await navigator.permissions.query({ name: "geolocation" });
       if (permission.state === "denied") {
         applyGeolocationFallback(
-          "Permissão de localização bloqueada no navegador.",
+          "Permissao de localizacao bloqueada no navegador.",
         );
         return;
       }
@@ -858,7 +973,8 @@ async function handleGeolocation() {
       const position = await requestCurrentPosition(options);
       applyCoordinates(position.coords.latitude, position.coords.longitude);
       saveLastGeolocation(position.coords.latitude, position.coords.longitude);
-      setStatus("Localização aplicada no formulário.");
+      setFieldValue("location_query", "Minha localização atual");
+      setStatus("Localização atual aplicada no formulário.");
       setError("");
       return;
     } catch (error) {
@@ -870,7 +986,7 @@ async function handleGeolocation() {
       }
 
       if (index === 0) {
-        setStatus("Falha na primeira tentativa. Tentando novamente...");
+        setStatus("Primeira tentativa sem sucesso. Tentando novamente...");
       }
     }
   }
@@ -905,6 +1021,7 @@ function handleActivityClick(event) {
 
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       applyCoordinates(lat, lng);
+      setFieldValue("location_query", label);
       setError("");
       setStatus(`Localização rápida aplicada: ${label}.`);
       activateTab("search");
@@ -932,6 +1049,17 @@ function handleActivityClick(event) {
 
 form.addEventListener("submit", handleSubmit);
 geoButton.addEventListener("click", handleGeolocation);
+if (locationQueryButton) {
+  locationQueryButton.addEventListener("click", handleLocationQuery);
+}
+if (locationQueryInput) {
+  locationQueryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleLocationQuery();
+    }
+  });
+}
 resultsBody.addEventListener("click", handleResultsClick);
 
 if (activityPanel) {
@@ -944,9 +1072,9 @@ for (const button of tabButtons) {
     activateTab(nextTab);
 
     if (nextTab === "search") {
-      const latField = form.elements.namedItem("lat");
-      if (latField instanceof HTMLInputElement) {
-        latField.focus();
+      const locationField = form.elements.namedItem("location_query");
+      if (locationField instanceof HTMLInputElement) {
+        locationField.focus();
       }
     }
   });

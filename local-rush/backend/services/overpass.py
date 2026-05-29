@@ -1,37 +1,51 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 import httpx
 
 from backend.services.site_analyzer import compute_opportunity_score
 
-OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter"
+OVERPASS_PRIMARY_ENDPOINT = "https://overpass-api.de/api/interpreter"
+DEFAULT_OVERPASS_ENDPOINTS = [
+    OVERPASS_PRIMARY_ENDPOINT,
+    "https://overpass.kumi.systems/api/interpreter",
+]
 
-CATEGORY_MAP: dict[str, list[tuple[str, str]]] = {
-    "barber": [("amenity", "barber"), ("shop", "hairdresser")],
-    "hairdresser": [("shop", "hairdresser")],
-    "gym": [("leisure", "fitness_centre")],
-    "clinic": [("amenity", "clinic")],
-    "restaurant": [("amenity", "restaurant")],
-    "dentist": [("amenity", "dentist")],
-    "store": [("shop", "general")],
-    "car_repair": [("shop", "car_repair")],
-    "real_estate": [("office", "estate_agent")],
-    "pharmacy": [("amenity", "pharmacy")],
+CATEGORY_MAP: dict[str, list[tuple[str, str | None]]] = {
+    "barber": [("amenity", "barber"), ("shop", "hairdresser"), ("shop", "barber")],
+    "hairdresser": [("shop", "hairdresser"), ("shop", "barber")],
+    "gym": [("leisure", "fitness_centre"), ("sport", "fitness")],
+    "clinic": [("amenity", "clinic"), ("healthcare", "clinic"), ("amenity", "doctors")],
+    "restaurant": [
+        ("amenity", "restaurant"),
+        ("amenity", "fast_food"),
+        ("amenity", "food_court"),
+    ],
+    "dentist": [("amenity", "dentist"), ("healthcare", "dentist")],
+    "store": [("shop", "general"), ("shop", None)],
+    "car_repair": [("shop", "car_repair"), ("craft", "car_repair")],
+    "real_estate": [("office", "estate_agent"), ("shop", "estate_agent")],
+    "pharmacy": [("amenity", "pharmacy"), ("shop", "chemist")],
     "bakery": [("shop", "bakery")],
-    "supermarket": [("shop", "supermarket")],
+    "supermarket": [("shop", "supermarket"), ("shop", "convenience")],
     "cafe": [("amenity", "cafe")],
-    "hotel": [("tourism", "hotel")],
-    "school": [("amenity", "school")],
+    "hotel": [("tourism", "hotel"), ("tourism", "hostel")],
+    "school": [("amenity", "school"), ("amenity", "kindergarten")],
 }
 
 SCORE_ORDER = {"Alta": 0, "Média": 1, "Baixa": 2}
+RETRYABLE_HTTP_STATUS = {406, 408, 409, 425, 429, 500, 502, 503, 504}
 
 
 class OverpassServiceError(Exception):
     """Friendly error surfaced to API layer."""
+
+    def __init__(self, message: str, status_code: int = 502) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _safe_timeout() -> int:
@@ -41,6 +55,30 @@ def _safe_timeout() -> int:
     except ValueError:
         timeout = 25
     return max(5, min(timeout, 120))
+
+
+def _safe_retries() -> int:
+    raw = os.getenv("OVERPASS_RETRIES", "2")
+    try:
+        retries = int(raw)
+    except ValueError:
+        retries = 2
+    return max(1, min(retries, 4))
+
+
+def _endpoint_candidates() -> list[str]:
+    raw = os.getenv("OVERPASS_ENDPOINTS", "").strip()
+    if raw:
+        candidates = [item.strip() for item in raw.split(",") if item.strip()]
+    else:
+        candidates = list(DEFAULT_OVERPASS_ENDPOINTS)
+
+    # Keep primary endpoint first and remove duplicates.
+    deduped: list[str] = []
+    for endpoint in [OVERPASS_PRIMARY_ENDPOINT, *candidates]:
+        if endpoint and endpoint not in deduped:
+            deduped.append(endpoint)
+    return deduped
 
 
 def _request_headers() -> dict[str, str]:
@@ -56,8 +94,14 @@ def _request_headers() -> dict[str, str]:
     }
 
 
+def _build_tag_filter(key: str, value: str | None) -> str:
+    if value is None:
+        return f'["{key}"]'
+    return f'["{key}"="{value}"]'
+
+
 def _build_overpass_query(
-    category_pairs: list[tuple[str, str]],
+    category_pairs: list[tuple[str, str | None]],
     lat: float,
     lng: float,
     radius: int,
@@ -67,16 +111,104 @@ def _build_overpass_query(
     query_lines = [f"[out:json][timeout:{timeout_seconds}];", "("]
 
     for key, value in category_pairs:
+        tag_filter = _build_tag_filter(key, value)
         query_lines.append(
-            f'  node["{key}"="{value}"](around:{radius},{lat:.6f},{lng:.6f});'
+            f"  node{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
         )
         query_lines.append(
-            f'  way["{key}"="{value}"](around:{radius},{lat:.6f},{lng:.6f});'
+            f"  way{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
+        )
+        query_lines.append(
+            f"  relation{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
         )
 
     query_lines.append(");")
     query_lines.append(f"out center tags {limit};")
     return "\n".join(query_lines)
+
+
+def _request_overpass(
+    query: str,
+    timeout_seconds: int,
+) -> httpx.Response:
+    max_retries = _safe_retries()
+    endpoints = _endpoint_candidates()
+    last_error: Exception | None = None
+
+    for endpoint_index, endpoint in enumerate(endpoints, start=1):
+        for attempt in range(1, max_retries + 1):
+            try:
+                with httpx.Client(timeout=timeout_seconds) as client:
+                    response = client.post(
+                        endpoint,
+                        data={"data": query},
+                        headers=_request_headers(),
+                    )
+                    response.raise_for_status()
+                    return response
+            except httpx.TimeoutException as exc:
+                last_error = exc
+                print(
+                    "[local-rush] Overpass timeout:",
+                    f"endpoint={endpoint}",
+                    f"attempt={attempt}/{max_retries}",
+                )
+            except httpx.HTTPStatusError as exc:
+                last_error = exc
+                status_code = exc.response.status_code
+                print(
+                    "[local-rush] Overpass HTTP error:",
+                    f"status={status_code}",
+                    f"endpoint={endpoint}",
+                    f"attempt={attempt}/{max_retries}",
+                )
+
+                if status_code not in RETRYABLE_HTTP_STATUS:
+                    raise OverpassServiceError(
+                        f"OpenStreetMap respondeu com erro HTTP {status_code}.",
+                        status_code=502,
+                    ) from exc
+            except httpx.RequestError as exc:
+                last_error = exc
+                print(
+                    "[local-rush] Overpass request error:",
+                    f"endpoint={endpoint}",
+                    f"attempt={attempt}/{max_retries}",
+                    f"error={exc}",
+                )
+
+            if attempt < max_retries:
+                # Short backoff before retrying same endpoint.
+                time.sleep(0.7 * attempt)
+
+        print(
+            "[local-rush] Falha no endpoint Overpass, tentando proximo:",
+            f"{endpoint_index}/{len(endpoints)}",
+            endpoint,
+        )
+
+    if isinstance(last_error, httpx.TimeoutException):
+        raise OverpassServiceError(
+            "A busca demorou demais no OpenStreetMap. Tente reduzir o raio.",
+            status_code=502,
+        ) from last_error
+
+    if isinstance(last_error, httpx.RequestError):
+        raise OverpassServiceError(
+            "Nao foi possivel conectar ao servico do OpenStreetMap no momento.",
+            status_code=502,
+        ) from last_error
+
+    if isinstance(last_error, httpx.HTTPStatusError):
+        raise OverpassServiceError(
+            "OpenStreetMap indisponivel no momento. Tente novamente em alguns segundos.",
+            status_code=502,
+        ) from last_error
+
+    raise OverpassServiceError(
+        "Nao foi possivel concluir a consulta ao OpenStreetMap.",
+        status_code=502,
+    )
 
 
 def _first_non_empty(tags: dict[str, Any], keys: list[str]) -> str:
@@ -108,7 +240,7 @@ def _build_address(tags: dict[str, Any]) -> str:
     address_parts = [part for part in [line_one, line_two, line_three] if part]
 
     if not address_parts:
-        return "Endereço não informado"
+        return "Endereco nao informado"
 
     return " - ".join(address_parts)
 
@@ -191,7 +323,10 @@ def search_overpass(
 ) -> list[dict[str, Any]]:
     category_pairs = CATEGORY_MAP.get(category)
     if not category_pairs:
-        raise OverpassServiceError("Categoria inválida para busca no OpenStreetMap.")
+        raise OverpassServiceError(
+            "Categoria invalida para busca no OpenStreetMap.",
+            status_code=422,
+        )
 
     timeout_seconds = _safe_timeout()
     query = _build_overpass_query(
@@ -211,37 +346,19 @@ def search_overpass(
         f"only_with_site={only_with_site}",
     )
 
-    try:
-        with httpx.Client(timeout=timeout_seconds) as client:
-            response = client.post(
-                OVERPASS_ENDPOINT,
-                data={"data": query},
-                headers=_request_headers(),
-            )
-            response.raise_for_status()
-    except httpx.TimeoutException as exc:
-        raise OverpassServiceError(
-            "A busca demorou demais no OpenStreetMap. Tente reduzir o raio."
-        ) from exc
-    except httpx.HTTPStatusError as exc:
-        raise OverpassServiceError(
-            f"OpenStreetMap respondeu com erro HTTP {exc.response.status_code}."
-        ) from exc
-    except httpx.RequestError as exc:
-        raise OverpassServiceError(
-            "Não foi possível conectar ao serviço do OpenStreetMap no momento."
-        ) from exc
+    response = _request_overpass(query=query, timeout_seconds=timeout_seconds)
 
     try:
         payload = response.json()
     except ValueError as exc:
         raise OverpassServiceError(
-            "O serviço do OpenStreetMap retornou uma resposta inválida."
+            "O servico do OpenStreetMap retornou uma resposta invalida.",
+            status_code=502,
         ) from exc
 
     elements = payload.get("elements")
     if not isinstance(elements, list):
-        raise OverpassServiceError("Resposta inesperada do OpenStreetMap.")
+        raise OverpassServiceError("Resposta inesperada do OpenStreetMap.", status_code=502)
 
     results: list[dict[str, Any]] = []
     seen_ids: set[str] = set()

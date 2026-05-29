@@ -150,6 +150,22 @@ body {
   gap: 12px;
 }
 
+.location-query-field,
+.form-hint {
+  grid-column: 1 / -1;
+}
+
+.form-hint {
+  margin: -2px 0 2px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.advanced-field {
+  color: #8ca0ba;
+}
+
 label {
   display: grid;
   gap: 6px;

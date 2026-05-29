@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import os
 
 from dotenv import load_dotenv
@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
+from backend.services.geocoding import GeocodingServiceError, resolve_location
 from backend.services.overpass import CATEGORY_MAP, OverpassServiceError, search_overpass
 
 load_dotenv()
@@ -15,7 +16,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
-app = FastAPI(title="Local Rush API", version="0.2.0")
+app = FastAPI(title="Local Rush API", version="0.3.1")
 
 allowed_origins = [
     "http://localhost",
@@ -48,7 +49,19 @@ class SearchPayload(BaseModel):
     def validate_category(cls, value: str) -> str:
         cleaned = value.strip().lower()
         if cleaned not in CATEGORY_MAP:
-            raise ValueError("Categoria inválida para este MVP.")
+            raise ValueError("Categoria invalida para este MVP.")
+        return cleaned
+
+
+class GeocodePayload(BaseModel):
+    query: str = Field(..., min_length=3, max_length=120)
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Informe uma cidade, bairro ou CEP.")
         return cleaned
 
 
@@ -60,10 +73,36 @@ def read_index() -> FileResponse:
 @app.get("/api/health")
 def health_check() -> dict:
     timeout = int(os.getenv("OVERPASS_TIMEOUT_SECONDS", "25"))
+    geocode_timeout = int(os.getenv("GEOCODING_TIMEOUT_SECONDS", "20"))
     return {
         "status": "ok",
         "service": "local-rush",
         "overpass_timeout_seconds": timeout,
+        "geocoding_timeout_seconds": geocode_timeout,
+    }
+
+
+@app.post("/api/geocode")
+def geocode_location(payload: GeocodePayload) -> dict:
+    print("[local-rush] /api/geocode", f"query={payload.query}")
+
+    try:
+        result = resolve_location(payload.query)
+    except GeocodingServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except Exception as exc:
+        print(f"[local-rush] erro interno em /api/geocode: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno ao resolver localizacao.",
+        ) from exc
+
+    return {
+        "query": result["query"],
+        "display_name": result["display_name"],
+        "lat": result["lat"],
+        "lng": result["lng"],
+        "attribution": "Dados © OpenStreetMap contributors, licença ODbL",
     }
 
 
@@ -87,7 +126,7 @@ def search_businesses(payload: SearchPayload) -> dict:
             only_with_site=payload.only_with_site,
         )
     except OverpassServiceError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
         print(f"[local-rush] erro interno em /api/search: {exc}")
         raise HTTPException(

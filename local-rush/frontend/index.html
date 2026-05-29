@@ -13,8 +13,8 @@
           <p class="eyebrow">Local Rush</p>
           <h1>Prospecção local com OpenStreetMap</h1>
           <p class="hero-subtitle">
-            Busque empresas próximas sem API paga. Defina coordenadas, categoria e
-            raio para encontrar oportunidades comerciais em minutos.
+            Busque empresas próximas sem API paga. Use localização atual ou digite
+            cidade/CEP para encontrar oportunidades comerciais em minutos.
           </p>
         </div>
         <aside class="hero-kpi" aria-label="Resumo rápido">
@@ -47,17 +47,27 @@
         <h2>Filtro de busca</h2>
         <form id="search-form" class="search-form" novalidate>
           <div class="form-grid">
-            <label>
-              Latitude
-              <input type="number" name="lat" step="0.000001" placeholder="-23.550520" required />
+            <label class="location-query-field">
+              Localização (cidade, bairro ou CEP)
+              <input
+                id="location-query"
+                type="text"
+                name="location_query"
+                placeholder="Ex: Centro, São Paulo ou 01310-100"
+              />
             </label>
+            <p class="form-hint">
+              Sem latitude/longitude: clique em "Usar localização atual" ou informe
+              cidade/CEP e clique em "Aplicar local informado".
+            </p>
             <label>
-              Longitude
-              <input type="number" name="lng" step="0.000001" placeholder="-46.633308" required />
-            </label>
-            <label>
-              Raio (m)
-              <input type="number" name="radius" min="1" max="5000" value="1500" required />
+              Raio da busca
+              <select name="radius_level" required>
+                <option value="small">Pequeno</option>
+                <option value="medium" selected>Médio</option>
+                <option value="high">Alto</option>
+                <option value="max">Máximo</option>
+              </select>
             </label>
             <label>
               Categoria
@@ -83,6 +93,28 @@
               Limite
               <input type="number" name="limit" min="1" max="20" value="10" required />
             </label>
+            <label class="advanced-field">
+              Latitude (avançado)
+              <input
+                type="number"
+                name="lat"
+                step="0.000001"
+                value="-23.550520"
+                placeholder="-23.550520"
+                required
+              />
+            </label>
+            <label class="advanced-field">
+              Longitude (avançado)
+              <input
+                type="number"
+                name="lng"
+                step="0.000001"
+                value="-46.633308"
+                placeholder="-46.633308"
+                required
+              />
+            </label>
             <label class="checkbox-field">
               <input type="checkbox" name="only_with_site" />
               Apenas empresas com site
@@ -91,7 +123,10 @@
 
           <div class="actions-row">
             <button id="geo-button" type="button" class="button secondary">
-              Usar minha localização
+              Usar localização atual
+            </button>
+            <button id="location-query-button" type="button" class="button secondary">
+              Aplicar local informado
             </button>
             <button id="search-button" type="submit" class="button primary">
               Buscar empresas
