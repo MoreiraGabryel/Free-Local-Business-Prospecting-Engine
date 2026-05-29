@@ -8,18 +8,145 @@
   </head>
   <body>
     <main class="app-shell">
-      <header class="header">
-        <p class="eyebrow">Local Rush MVP</p>
-        <h1>Prospecção local com OpenStreetMap</h1>
-        <p class="subtitle">
-          Base inicial pronta. No próximo bloco entram formulário e integração com
-          Overpass API.
-        </p>
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Local Rush</p>
+          <h1>Prospecção local com OpenStreetMap</h1>
+          <p class="hero-subtitle">
+            Busque empresas próximas sem API paga. Defina coordenadas, categoria e
+            raio para encontrar oportunidades comerciais em minutos.
+          </p>
+        </div>
+        <aside class="hero-kpi" aria-label="Resumo rápido">
+          <strong>Busca local</strong>
+          <span>Sem banco de dados</span>
+          <span>Sem autenticação</span>
+        </aside>
       </header>
 
-      <section class="status-card" aria-live="polite">
-        <span class="dot" aria-hidden="true"></span>
-        <p>Backend e frontend servidos localmente via FastAPI.</p>
+      <nav class="tabs" aria-label="Abas de atividade">
+        <button class="tab-button is-active" type="button" data-tab="history">
+          <img src="/static/assets/icons/history.svg" alt="" aria-hidden="true" />
+          Histórico
+        </button>
+        <button class="tab-button" type="button" data-tab="recent">
+          <img src="/static/assets/icons/recent.svg" alt="" aria-hidden="true" />
+          Empresas recentes
+        </button>
+        <button class="tab-button" type="button" data-tab="saved">
+          <img src="/static/assets/icons/saved.svg" alt="" aria-hidden="true" />
+          Empresas salvas
+        </button>
+      </nav>
+
+      <section class="panel">
+        <h2>Filtro de busca</h2>
+        <form id="search-form" class="search-form" novalidate>
+          <div class="form-grid">
+            <label>
+              Latitude
+              <input type="number" name="lat" step="0.000001" placeholder="-23.550520" required />
+            </label>
+            <label>
+              Longitude
+              <input type="number" name="lng" step="0.000001" placeholder="-46.633308" required />
+            </label>
+            <label>
+              Raio (m)
+              <input type="number" name="radius" min="1" max="5000" value="1500" required />
+            </label>
+            <label>
+              Categoria
+              <select name="category" required>
+                <option value="restaurant">Restaurante</option>
+                <option value="barber">Barbearia</option>
+                <option value="hairdresser">Cabeleireiro</option>
+                <option value="gym">Academia</option>
+                <option value="clinic">Clínica</option>
+                <option value="dentist">Dentista</option>
+                <option value="store">Loja geral</option>
+                <option value="car_repair">Oficina</option>
+                <option value="real_estate">Imobiliária</option>
+                <option value="pharmacy">Farmácia</option>
+                <option value="bakery">Padaria</option>
+                <option value="supermarket">Supermercado</option>
+                <option value="cafe">Café</option>
+                <option value="hotel">Hotel</option>
+                <option value="school">Escola</option>
+              </select>
+            </label>
+            <label>
+              Limite
+              <input type="number" name="limit" min="1" max="20" value="10" required />
+            </label>
+            <label class="checkbox-field">
+              <input type="checkbox" name="only_with_site" />
+              Apenas empresas com site
+            </label>
+          </div>
+
+          <div class="actions-row">
+            <button id="geo-button" type="button" class="button secondary">
+              Usar minha localização
+            </button>
+            <button id="search-button" type="submit" class="button primary">
+              Buscar empresas
+            </button>
+          </div>
+
+          <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+          <p id="error-message" class="error-message" role="alert"></p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Resultados</h2>
+          <p id="results-count">Nenhuma busca realizada.</p>
+        </div>
+
+        <div class="results-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Categoria</th>
+                <th>Contato</th>
+                <th>Score</th>
+                <th>Mapa</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr>
+                <td colspan="5" class="empty-state">Faça uma busca para listar empresas.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="activity-panel">
+        <h2>Atividade local</h2>
+        <div class="activity-grid">
+          <article class="activity-card is-active" data-list="history">
+            <h3>Histórico</h3>
+            <ul id="history-list">
+              <li>Nenhuma busca registrada.</li>
+            </ul>
+          </article>
+          <article class="activity-card" data-list="recent">
+            <h3>Empresas recentes</h3>
+            <ul id="recent-list">
+              <li>Nenhuma empresa recente.</li>
+            </ul>
+          </article>
+          <article class="activity-card" data-list="saved">
+            <h3>Empresas salvas</h3>
+            <ul id="saved-list">
+              <li>Nenhuma empresa salva.</li>
+            </ul>
+          </article>
+        </div>
       </section>
 
       <footer class="footer-note">
