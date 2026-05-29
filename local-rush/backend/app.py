@@ -84,14 +84,14 @@ def health_check() -> dict:
 
 @app.post("/api/geocode")
 def geocode_location(payload: GeocodePayload) -> dict:
-    print("[local-rush] /api/geocode", f"query={payload.query}")
+    print("[local-rush] /api/geocode solicitado")
 
     try:
         result = resolve_location(payload.query)
     except GeocodingServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
-        print(f"[local-rush] erro interno em /api/geocode: {exc}")
+        print("[local-rush] erro interno em /api/geocode")
         raise HTTPException(
             status_code=500,
             detail="Erro interno ao resolver localizacao.",
@@ -128,7 +128,7 @@ def search_businesses(payload: SearchPayload) -> dict:
     except OverpassServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
-        print(f"[local-rush] erro interno em /api/search: {exc}")
+        print("[local-rush] erro interno em /api/search")
         raise HTTPException(
             status_code=500,
             detail="Erro interno ao processar a busca.",

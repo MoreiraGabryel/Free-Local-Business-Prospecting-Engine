@@ -136,7 +136,6 @@ def _request_once(
             print(
                 "[local-rush] Geocode timeout:",
                 f"attempt={attempt}/{max_retries}",
-                f"params={params}",
             )
         except httpx.HTTPStatusError as exc:
             last_error = exc
@@ -145,7 +144,6 @@ def _request_once(
                 "[local-rush] Geocode HTTP error:",
                 f"status={status_code}",
                 f"attempt={attempt}/{max_retries}",
-                f"params={params}",
             )
 
             if status_code not in RETRYABLE_HTTP_STATUS:
@@ -158,8 +156,6 @@ def _request_once(
             print(
                 "[local-rush] Geocode request error:",
                 f"attempt={attempt}/{max_retries}",
-                f"params={params}",
-                f"error={exc}",
             )
         except ValueError as exc:
             raise GeocodingServiceError(

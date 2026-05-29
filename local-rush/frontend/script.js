@@ -597,6 +597,21 @@ function refreshActivityLists() {
   renderSavedList();
 }
 
+function clearLocalData() {
+  localStorage.removeItem(STORAGE_KEYS.history);
+  localStorage.removeItem(STORAGE_KEYS.recent);
+  localStorage.removeItem(STORAGE_KEYS.saved);
+  localStorage.removeItem(STORAGE_KEYS.lastGeo);
+
+  currentResults = [];
+  currentResultsById.clear();
+  resultsCount.textContent = "Nenhuma busca realizada.";
+  showEmptyResults("Faça uma busca para listar empresas.");
+  refreshActivityLists();
+  setError("");
+  setStatus("Dados locais foram limpos com sucesso.");
+}
+
 function activateTab(tabName) {
   for (const button of tabButtons) {
     button.classList.toggle("is-active", button.dataset.tab === tabName);
@@ -1031,6 +1046,11 @@ function handleActivityClick(event) {
 
   if (action === "retry-geolocation") {
     handleGeolocation();
+    return;
+  }
+
+  if (action === "clear-local-data") {
+    clearLocalData();
     return;
   }
 

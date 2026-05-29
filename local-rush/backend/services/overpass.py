@@ -1,7 +1,9 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 import time
+import unicodedata
 from typing import Any
 
 import httpx
@@ -12,6 +14,184 @@ OVERPASS_PRIMARY_ENDPOINT = "https://overpass-api.de/api/interpreter"
 DEFAULT_OVERPASS_ENDPOINTS = [
     OVERPASS_PRIMARY_ENDPOINT,
     "https://overpass.kumi.systems/api/interpreter",
+]
+GENERAL_CONTACT_CATEGORY = "business_contact"
+GENERAL_CONTACT_KEYS = [
+    "phone",
+    "contact:phone",
+    "mobile",
+    "contact:mobile",
+    "whatsapp",
+    "contact:whatsapp",
+    "website",
+    "contact:website",
+    "url",
+    "email",
+    "contact:email",
+]
+
+CATEGORY_KEYWORDS: dict[str, list[str]] = {
+    "barber": [
+        "barbearia",
+        "barbeiro",
+        "salao masculino",
+        "cabelo masculino",
+        "barber",
+        "barbershop",
+    ],
+    "hairdresser": [
+        "cabeleireiro",
+        "cabeleireira",
+        "salao",
+        "hairdresser",
+        "hair salon",
+    ],
+    "gym": [
+        "academia",
+        "fitness",
+        "musculacao",
+        "crossfit",
+        "personal",
+        "pilates",
+        "treino",
+    ],
+    "clinic": [
+        "clinica",
+        "consultorio",
+        "centro medico",
+        "saude",
+        "odontologia",
+        "odontologico",
+        "estetica",
+        "fisioterapia",
+        "psicologia",
+    ],
+    "restaurant": [
+        "restaurante",
+        "lanchonete",
+        "pizzaria",
+        "hamburgueria",
+        "comida",
+        "delivery",
+        "bar",
+        "lanche",
+        "food",
+    ],
+    "dentist": [
+        "dentista",
+        "odontologia",
+        "odontologico",
+        "clinica odontologica",
+    ],
+    "store": [
+        "loja",
+        "mercearia",
+        "mercadinho",
+        "comercio",
+        "utilidades",
+        "armazem",
+    ],
+    "car_repair": [
+        "oficina",
+        "mecanica",
+        "auto center",
+        "autocenter",
+        "funilaria",
+        "borracharia",
+    ],
+    "real_estate": [
+        "imobiliaria",
+        "corretora",
+        "imovel",
+        "aluguel",
+        "imoveis",
+        "estate agent",
+    ],
+    "pharmacy": [
+        "farmacia",
+        "drogaria",
+        "medicamentos",
+        "drugstore",
+        "farmaceutica",
+    ],
+    "bakery": [
+        "padaria",
+        "confeitaria",
+        "panificadora",
+        "bakery",
+        "pao",
+    ],
+    "supermarket": [
+        "mercado",
+        "supermercado",
+        "mercadinho",
+        "mercearia",
+        "hortifruti",
+        "acougue",
+    ],
+    "cafe": [
+        "cafe",
+        "cafeteria",
+        "coffee",
+        "espresso",
+        "doceria",
+    ],
+    "hotel": [
+        "hotel",
+        "hostel",
+        "pousada",
+        "inn",
+        "resort",
+    ],
+    "school": [
+        "escola",
+        "colegio",
+        "instituto",
+        "educacao",
+        "ensino",
+    ],
+    GENERAL_CONTACT_CATEGORY: [
+        "empresa",
+        "negocio",
+        "comercio",
+        "loja",
+        "servico",
+        "prestador",
+        "micro",
+    ],
+}
+
+SEARCHABLE_TAG_KEYS = [
+    "name",
+    "official_name",
+    "short_name",
+    "alt_name",
+    "brand",
+    "operator",
+    "description",
+    "amenity",
+    "shop",
+    "office",
+    "craft",
+    "tourism",
+    "healthcare",
+    "healthcare:speciality",
+    "cuisine",
+]
+
+QUERY_KEYWORD_TAG_KEYS = [
+    "name",
+    "official_name",
+    "brand",
+    "description",
+    "shop",
+    "amenity",
+    "office",
+    "craft",
+    "tourism",
+    "healthcare",
+    "healthcare:speciality",
+    "cuisine",
 ]
 
 CATEGORY_MAP: dict[str, list[tuple[str, str | None]]] = {
@@ -34,6 +214,7 @@ CATEGORY_MAP: dict[str, list[tuple[str, str | None]]] = {
     "cafe": [("amenity", "cafe")],
     "hotel": [("tourism", "hotel"), ("tourism", "hostel")],
     "school": [("amenity", "school"), ("amenity", "kindergarten")],
+    GENERAL_CONTACT_CATEGORY: [],
 }
 
 SCORE_ORDER = {"Alta": 0, "Média": 1, "Baixa": 2}
@@ -94,6 +275,113 @@ def _request_headers() -> dict[str, str]:
     }
 
 
+def _normalize_match_text(raw_value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", raw_value)
+    stripped = "".join(
+        char for char in normalized if unicodedata.category(char) != "Mn"
+    )
+    lowered = stripped.lower()
+    collapsed = re.sub(r"[^a-z0-9]+", " ", lowered)
+    return re.sub(r"\s+", " ", collapsed).strip()
+
+
+_NORMALIZED_KEYWORD_CACHE: dict[str, list[str]] = {}
+
+
+def _normalized_keywords_for_category(category: str) -> list[str]:
+    cached = _NORMALIZED_KEYWORD_CACHE.get(category)
+    if cached is not None:
+        return cached
+
+    keywords = CATEGORY_KEYWORDS.get(category, [])
+    normalized_keywords: list[str] = []
+    for keyword in keywords:
+        normalized = _normalize_match_text(keyword)
+        if normalized:
+            normalized_keywords.append(normalized)
+    _NORMALIZED_KEYWORD_CACHE[category] = normalized_keywords
+    return normalized_keywords
+
+
+def _build_searchable_text(tags: dict[str, Any]) -> str:
+    raw_parts: list[str] = []
+
+    for key in SEARCHABLE_TAG_KEYS:
+        value = tags.get(key)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            raw_parts.append(text)
+
+    # Include remaining short textual tags for better coverage on poorly tagged places.
+    for key, value in tags.items():
+        if key in SEARCHABLE_TAG_KEYS or value is None:
+            continue
+        text = str(value).strip()
+        if text and len(text) <= 80:
+            raw_parts.append(text)
+
+    return _normalize_match_text(" ".join(raw_parts))
+
+
+def _matches_by_keyword(category: str, tags: dict[str, Any]) -> bool:
+    normalized_text = _build_searchable_text(tags)
+    if not normalized_text:
+        return False
+
+    padded_text = f" {normalized_text} "
+    for keyword in _normalized_keywords_for_category(category):
+        if " " in keyword:
+            if keyword in normalized_text:
+                return True
+            continue
+
+        # Avoid false positives for very short words such as "bar".
+        if len(keyword) <= 3:
+            if f" {keyword} " in padded_text:
+                return True
+            continue
+
+        if f" {keyword} " in padded_text or keyword in normalized_text:
+            return True
+
+    return False
+
+
+def _matches_by_category_tags(category: str, tags: dict[str, Any]) -> bool:
+    pairs = CATEGORY_MAP.get(category, [])
+    for key, value in pairs:
+        current = str(tags.get(key, "")).strip().lower()
+        if not current:
+            continue
+
+        if value is None:
+            return True
+        if current == value.lower():
+            return True
+
+    return False
+
+
+def _keyword_regex_for_category(category: str) -> str:
+    keywords = _normalized_keywords_for_category(category)
+    if not keywords:
+        return ""
+    escaped = [re.escape(keyword) for keyword in keywords if keyword]
+    return "|".join(escaped)
+
+
+def _matches_requested_category(category: str, tags: dict[str, Any]) -> bool:
+    if category == GENERAL_CONTACT_CATEGORY:
+        return True
+
+    if _matches_by_keyword(category, tags):
+        return True
+
+    return _matches_by_category_tags(category, tags)
+
+
 def _build_tag_filter(key: str, value: str | None) -> str:
     if value is None:
         return f'["{key}"]'
@@ -107,6 +395,7 @@ def _build_overpass_query(
     radius: int,
     limit: int,
     timeout_seconds: int,
+    keyword_regex: str,
 ) -> str:
     query_lines = [f"[out:json][timeout:{timeout_seconds}];", "("]
 
@@ -122,9 +411,61 @@ def _build_overpass_query(
             f"  relation{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
         )
 
+    if keyword_regex:
+        for key in QUERY_KEYWORD_TAG_KEYS:
+            query_lines.append(
+                f'  node["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
+            )
+            query_lines.append(
+                f'  way["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
+            )
+            query_lines.append(
+                f'  relation["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
+            )
+
     query_lines.append(");")
     query_lines.append(f"out center tags {limit};")
     return "\n".join(query_lines)
+
+
+def _build_general_contact_query(
+    *,
+    lat: float,
+    lng: float,
+    radius: int,
+    limit: int,
+    timeout_seconds: int,
+) -> str:
+    query_lines = [f"[out:json][timeout:{timeout_seconds}];", "("]
+
+    for contact_key in GENERAL_CONTACT_KEYS:
+        query_lines.append(
+            f'  node["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
+        )
+        query_lines.append(
+            f'  way["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
+        )
+        query_lines.append(
+            f'  relation["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
+        )
+
+    query_lines.append(");")
+    query_lines.append(f"out center tags {limit};")
+    return "\n".join(query_lines)
+
+
+def _is_excluded_general_contact(tags: dict[str, Any]) -> bool:
+    amenity = str(tags.get("amenity", "")).strip().lower()
+    healthcare = str(tags.get("healthcare", "")).strip().lower()
+
+    if amenity in {"school", "college", "university", "kindergarten"}:
+        return True
+
+    # User request: exclude hospitals from this broad contact-based search.
+    if amenity == "hospital" or healthcare == "hospital":
+        return True
+
+    return False
 
 
 def _request_overpass(
@@ -274,6 +615,12 @@ def _opportunity_result(
     only_with_site: bool,
 ) -> dict[str, Any] | None:
     tags = element.get("tags") or {}
+
+    if category == GENERAL_CONTACT_CATEGORY and _is_excluded_general_contact(tags):
+        return None
+    if not _matches_requested_category(category, tags):
+        return None
+
     lat, lng = _extract_coordinates(element)
     if lat is None or lng is None:
         return None
@@ -321,22 +668,33 @@ def search_overpass(
     limit: int,
     only_with_site: bool,
 ) -> list[dict[str, Any]]:
-    category_pairs = CATEGORY_MAP.get(category)
-    if not category_pairs:
+    if category not in CATEGORY_MAP:
         raise OverpassServiceError(
             "Categoria invalida para busca no OpenStreetMap.",
             status_code=422,
         )
+    category_pairs = CATEGORY_MAP[category]
 
     timeout_seconds = _safe_timeout()
-    query = _build_overpass_query(
-        category_pairs=category_pairs,
-        lat=lat,
-        lng=lng,
-        radius=radius,
-        limit=limit,
-        timeout_seconds=timeout_seconds,
-    )
+    if category == GENERAL_CONTACT_CATEGORY:
+        query = _build_general_contact_query(
+            lat=lat,
+            lng=lng,
+            radius=radius,
+            limit=limit,
+            timeout_seconds=timeout_seconds,
+        )
+    else:
+        keyword_regex = _keyword_regex_for_category(category)
+        query = _build_overpass_query(
+            category_pairs=category_pairs,
+            lat=lat,
+            lng=lng,
+            radius=radius,
+            limit=limit,
+            timeout_seconds=timeout_seconds,
+            keyword_regex=keyword_regex,
+        )
 
     print(
         "[local-rush] Buscando Overpass:",

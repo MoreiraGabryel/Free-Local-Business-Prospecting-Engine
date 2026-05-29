@@ -72,6 +72,7 @@
             <label>
               Categoria
               <select name="category" required>
+                <option value="business_contact">Micro-Empresas</option>
                 <option value="restaurant">Restaurante</option>
                 <option value="barber">Barbearia</option>
                 <option value="hairdresser">Cabeleireiro</option>
@@ -226,6 +227,13 @@
                 data-action="retry-geolocation"
               >
                 Tentar localização automática novamente
+              </button>
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="clear-local-data"
+              >
+                Limpar dados locais
               </button>
             </div>
           </article>
