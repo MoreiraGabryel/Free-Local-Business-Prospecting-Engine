@@ -178,6 +178,10 @@ venv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
+---
+# INICIAR/DESLIGAR LOCALHOST
+Existe um arquivo.bat "tohhle_localhost" apenas executar que será ligado;
+Caso já esteja ligado esse mesmo bat desliga o localhost;
 
 ---
 
