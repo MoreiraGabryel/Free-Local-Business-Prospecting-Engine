@@ -25,7 +25,11 @@
       </header>
 
       <nav class="tabs" aria-label="Abas de atividade">
-        <button class="tab-button is-active" type="button" data-tab="history">
+        <button class="tab-button is-active" type="button" data-tab="search">
+          <img src="/static/assets/icons/search.svg" alt="" aria-hidden="true" />
+          Nova busca
+        </button>
+        <button class="tab-button" type="button" data-tab="history">
           <img src="/static/assets/icons/history.svg" alt="" aria-hidden="true" />
           Histórico
         </button>
@@ -94,7 +98,13 @@
             </button>
           </div>
 
-          <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+          <p
+            id="status-message"
+            class="status-message"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
           <p id="error-message" class="error-message" role="alert"></p>
         </form>
       </section>
@@ -114,11 +124,12 @@
                 <th>Contato</th>
                 <th>Score</th>
                 <th>Mapa</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="results-body">
               <tr>
-                <td colspan="5" class="empty-state">Faça uma busca para listar empresas.</td>
+                <td colspan="6" class="empty-state">Faça uma busca para listar empresas.</td>
               </tr>
             </tbody>
           </table>
@@ -128,7 +139,62 @@
       <section class="panel" id="activity-panel">
         <h2>Atividade local</h2>
         <div class="activity-grid">
-          <article class="activity-card is-active" data-list="history">
+          <article class="activity-card is-active" data-list="search">
+            <h3>Nova busca</h3>
+            <p class="search-help-text">
+              Se a localização automática falhar, use um ponto de partida rápido:
+            </p>
+            <div class="quick-location-grid">
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="quick-location"
+                data-label="São Paulo (Centro)"
+                data-lat="-23.550520"
+                data-lng="-46.633308"
+              >
+                São Paulo (Centro)
+              </button>
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="quick-location"
+                data-label="Rio de Janeiro (Centro)"
+                data-lat="-22.906847"
+                data-lng="-43.172897"
+              >
+                Rio de Janeiro (Centro)
+              </button>
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="quick-location"
+                data-label="Brasília (Centro)"
+                data-lat="-15.793889"
+                data-lng="-47.882778"
+              >
+                Brasília (Centro)
+              </button>
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="quick-location"
+                data-label="Belo Horizonte (Centro)"
+                data-lat="-19.916681"
+                data-lng="-43.934493"
+              >
+                Belo Horizonte (Centro)
+              </button>
+              <button
+                class="mini-button quick-location-button"
+                type="button"
+                data-action="retry-geolocation"
+              >
+                Tentar localização automática novamente
+              </button>
+            </div>
+          </article>
+          <article class="activity-card" data-list="history">
             <h3>Histórico</h3>
             <ul id="history-list">
               <li>Nenhuma busca registrada.</li>

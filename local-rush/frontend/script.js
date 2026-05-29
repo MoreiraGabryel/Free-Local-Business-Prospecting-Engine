@@ -5,6 +5,7 @@ const statusMessage = document.getElementById("status-message");
 const errorMessage = document.getElementById("error-message");
 const resultsCount = document.getElementById("results-count");
 const resultsBody = document.getElementById("results-body");
+const activityPanel = document.getElementById("activity-panel");
 
 const historyList = document.getElementById("history-list");
 const recentList = document.getElementById("recent-list");
@@ -17,9 +18,37 @@ const STORAGE_KEYS = {
   history: "localrush_history",
   recent: "localrush_recent",
   saved: "localrush_saved",
+  lastGeo: "localrush_last_geo",
 };
 
+const STORAGE_LIMITS = {
+  history: 15,
+  recent: 20,
+  saved: 60,
+};
+
+const currentResultsById = new Map();
+let currentResults = [];
 let isLoading = false;
+
+const DEFAULT_FALLBACK = {
+  label: "São Paulo (Centro)",
+  lat: -23.55052,
+  lng: -46.633308,
+};
+
+const GEO_ATTEMPTS = [
+  {
+    enableHighAccuracy: false,
+    timeout: 9000,
+    maximumAge: 600000,
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 18000,
+    maximumAge: 0,
+  },
+];
 
 function readList(key) {
   try {
@@ -32,32 +61,11 @@ function readList(key) {
 }
 
 function writeList(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function setLoading(loading) {
-  isLoading = loading;
-  searchButton.disabled = loading;
-  geoButton.disabled = loading;
-
-  if (loading) {
-    searchButton.textContent = "Buscando...";
-  } else {
-    searchButton.textContent = "Buscar empresas";
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn("[local-rush] Falha ao gravar storage:", key, error);
   }
-}
-
-function setStatus(message) {
-  statusMessage.textContent = message;
-}
-
-function setError(message) {
-  errorMessage.textContent = message;
-}
-
-function clearMessages() {
-  setStatus("");
-  setError("");
 }
 
 function safeExternalUrl(rawValue) {
@@ -74,6 +82,113 @@ function safeExternalUrl(rawValue) {
   } catch {
     return "";
   }
+}
+
+function normalizeCompany(rawCompany) {
+  const lat = Number(rawCompany.lat);
+  const lng = Number(rawCompany.lng);
+
+  const safeName = String(rawCompany.name || "Sem nome").trim() || "Sem nome";
+  const safeCategory = String(rawCompany.category || "-").trim() || "-";
+
+  const id = [
+    safeName.toLowerCase(),
+    safeCategory.toLowerCase(),
+    Number.isFinite(lat) ? lat.toFixed(6) : "",
+    Number.isFinite(lng) ? lng.toFixed(6) : "",
+  ].join("|");
+
+  return {
+    id,
+    name: safeName,
+    category: safeCategory,
+    address: String(rawCompany.address || "Endereço não informado").trim() || "Endereço não informado",
+    phone: String(rawCompany.phone || "").trim(),
+    whatsapp: String(rawCompany.whatsapp || "").trim(),
+    email: String(rawCompany.email || "").trim(),
+    website: safeExternalUrl(rawCompany.website),
+    maps_link: safeExternalUrl(rawCompany.maps_link),
+    opening_hours: String(rawCompany.opening_hours || "").trim(),
+    opportunity_score: String(rawCompany.opportunity_score || "Baixa").trim() || "Baixa",
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null,
+  };
+}
+
+function formatDateTime(isoString) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return "Agora";
+  }
+
+  return date.toLocaleString("pt-BR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getSavedCompanies() {
+  return readList(STORAGE_KEYS.saved).filter(
+    (item) => item && typeof item.id === "string",
+  );
+}
+
+function getSavedIdSet() {
+  return new Set(getSavedCompanies().map((item) => item.id));
+}
+
+function setLoading(loading) {
+  isLoading = loading;
+  searchButton.disabled = loading;
+  geoButton.disabled = loading;
+  searchButton.textContent = loading ? "Buscando..." : "Buscar empresas";
+}
+
+function setStatus(message) {
+  statusMessage.textContent = message;
+}
+
+function setError(message) {
+  errorMessage.textContent = message;
+}
+
+function clearMessages() {
+  setStatus("");
+  setError("");
+}
+
+function showEmptyResults(message) {
+  resultsBody.textContent = "";
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  cell.colSpan = 6;
+  cell.className = "empty-state";
+  cell.textContent = message;
+  row.appendChild(cell);
+  resultsBody.appendChild(row);
+}
+
+function createCompanyCell(company) {
+  const td = document.createElement("td");
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "company-main";
+
+  const name = document.createElement("strong");
+  name.textContent = company.name;
+
+  const address = document.createElement("span");
+  address.className = "company-address";
+  address.textContent = company.address;
+
+  wrapper.appendChild(name);
+  wrapper.appendChild(address);
+  td.appendChild(wrapper);
+
+  return td;
 }
 
 function createCell(text) {
@@ -125,11 +240,10 @@ function createContactCell(company) {
     group.appendChild(link);
   }
 
-  const website = safeExternalUrl(company.website);
-  if (website) {
+  if (company.website) {
     const link = document.createElement("a");
     link.textContent = "Website";
-    link.href = website;
+    link.href = company.website;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     group.appendChild(link);
@@ -159,16 +273,15 @@ function createScoreCell(score) {
 
 function createMapCell(mapsLink) {
   const td = document.createElement("td");
-  const safeMapUrl = safeExternalUrl(mapsLink);
 
-  if (!safeMapUrl) {
+  if (!mapsLink) {
     td.textContent = "Indisponível";
     return td;
   }
 
   const link = document.createElement("a");
   link.className = "map-link";
-  link.href = safeMapUrl;
+  link.href = mapsLink;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.textContent = "Abrir mapa";
@@ -176,35 +289,50 @@ function createMapCell(mapsLink) {
   return td;
 }
 
-function showEmptyResults(message) {
-  resultsBody.textContent = "";
-  const row = document.createElement("tr");
-  const cell = document.createElement("td");
-  cell.colSpan = 5;
-  cell.className = "empty-state";
-  cell.textContent = message;
-  row.appendChild(cell);
-  resultsBody.appendChild(row);
+function createActionCell(company, isSaved) {
+  const td = document.createElement("td");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "table-action-button";
+
+  if (isSaved) {
+    button.classList.add("is-saved");
+    button.textContent = "Remover salva";
+    button.dataset.action = "remove-company";
+  } else {
+    button.textContent = "Salvar empresa";
+    button.dataset.action = "save-company";
+  }
+
+  button.dataset.companyId = company.id;
+  td.appendChild(button);
+  return td;
 }
 
 function renderResults(results) {
   resultsBody.textContent = "";
+  currentResultsById.clear();
 
   if (!results.length) {
     showEmptyResults("Nenhuma empresa encontrada para os filtros informados.");
     return;
   }
 
+  const savedIds = getSavedIdSet();
   const fragment = document.createDocumentFragment();
 
   for (const company of results) {
     const row = document.createElement("tr");
+    const normalized = normalizeCompany(company);
 
-    row.appendChild(createCell(company.name || "Sem nome"));
-    row.appendChild(createCell(company.category || "-"));
-    row.appendChild(createContactCell(company));
-    row.appendChild(createScoreCell(company.opportunity_score || "Baixa"));
-    row.appendChild(createMapCell(company.maps_link || ""));
+    currentResultsById.set(normalized.id, normalized);
+
+    row.appendChild(createCompanyCell(normalized));
+    row.appendChild(createCell(normalized.category));
+    row.appendChild(createContactCell(normalized));
+    row.appendChild(createScoreCell(normalized.opportunity_score));
+    row.appendChild(createMapCell(normalized.maps_link));
+    row.appendChild(createActionCell(normalized, savedIds.has(normalized.id)));
 
     fragment.appendChild(row);
   }
@@ -212,76 +340,249 @@ function renderResults(results) {
   resultsBody.appendChild(fragment);
 }
 
-function formatDateTime(isoString) {
-  try {
-    return new Date(isoString).toLocaleString("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-  } catch {
-    return "Agora";
+function upsertSavedCompany(company) {
+  const saved = getSavedCompanies();
+  const exists = saved.some((item) => item.id === company.id);
+  if (exists) {
+    return false;
   }
+
+  saved.unshift({ ...company, saved_at: new Date().toISOString() });
+  writeList(STORAGE_KEYS.saved, saved.slice(0, STORAGE_LIMITS.saved));
+  return true;
 }
 
-function renderSimpleList(target, items, emptyText) {
-  target.textContent = "";
+function removeSavedCompany(companyId) {
+  const saved = getSavedCompanies();
+  const filtered = saved.filter((item) => item.id !== companyId);
 
-  if (!items.length) {
-    const li = document.createElement("li");
-    li.textContent = emptyText;
-    target.appendChild(li);
-    return;
+  if (filtered.length === saved.length) {
+    return false;
   }
 
-  const fragment = document.createDocumentFragment();
-  for (const item of items) {
-    const li = document.createElement("li");
-    li.textContent = item;
-    fragment.appendChild(li);
-  }
-  target.appendChild(fragment);
-}
-
-function refreshActivityLists() {
-  const history = readList(STORAGE_KEYS.history);
-  const recent = readList(STORAGE_KEYS.recent);
-  const saved = readList(STORAGE_KEYS.saved);
-
-  renderSimpleList(
-    historyList,
-    history.map((entry) => `${entry.when} • ${entry.category} • ${entry.total} resultado(s)`),
-    "Nenhuma busca registrada.",
-  );
-
-  renderSimpleList(
-    recentList,
-    recent.map((entry) => `${entry.name} (${entry.category})`),
-    "Nenhuma empresa recente.",
-  );
-
-  renderSimpleList(
-    savedList,
-    saved.map((entry) => `${entry.name} (${entry.category})`),
-    "Nenhuma empresa salva.",
-  );
+  writeList(STORAGE_KEYS.saved, filtered);
+  return true;
 }
 
 function saveHistoryEntry(payload, total) {
   const history = readList(STORAGE_KEYS.history);
+
   history.unshift({
-    when: formatDateTime(new Date().toISOString()),
+    when: new Date().toISOString(),
     category: payload.category,
     total,
+    payload,
   });
-  writeList(STORAGE_KEYS.history, history.slice(0, 10));
+
+  writeList(STORAGE_KEYS.history, history.slice(0, STORAGE_LIMITS.history));
 }
 
 function saveRecentEntries(results) {
-  const mapped = results.slice(0, 10).map((item) => ({
-    name: item.name || "Sem nome",
-    category: item.category || "-",
+  const existing = readList(STORAGE_KEYS.recent).filter(
+    (item) => item && typeof item.id === "string",
+  );
+
+  const incoming = results.map((item) => ({
+    ...normalizeCompany(item),
+    seen_at: new Date().toISOString(),
   }));
-  writeList(STORAGE_KEYS.recent, mapped);
+
+  const merged = [];
+  const seenIds = new Set();
+
+  for (const item of [...incoming, ...existing]) {
+    if (seenIds.has(item.id)) {
+      continue;
+    }
+    seenIds.add(item.id);
+    merged.push(item);
+  }
+
+  writeList(STORAGE_KEYS.recent, merged.slice(0, STORAGE_LIMITS.recent));
+}
+
+function createEmptyActivityItem(text) {
+  const li = document.createElement("li");
+  li.textContent = text;
+  return li;
+}
+
+function createActivityItem({ title, meta, actions }) {
+  const li = document.createElement("li");
+  li.className = "activity-item";
+
+  const main = document.createElement("div");
+  main.className = "activity-item-main";
+
+  const titleNode = document.createElement("span");
+  titleNode.className = "activity-title";
+  titleNode.textContent = title;
+
+  const metaNode = document.createElement("span");
+  metaNode.className = "activity-meta";
+  metaNode.textContent = meta;
+
+  main.appendChild(titleNode);
+  main.appendChild(metaNode);
+  li.appendChild(main);
+
+  if (actions.length) {
+    const actionsWrap = document.createElement("div");
+    actionsWrap.className = "activity-item-actions";
+
+    for (const action of actions) {
+      if (action.type === "link") {
+        const link = document.createElement("a");
+        link.className = "mini-link";
+        link.href = action.href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = action.label;
+        actionsWrap.appendChild(link);
+      } else {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mini-button";
+        button.textContent = action.label;
+        button.dataset.action = action.action;
+
+        if (action.companyId) {
+          button.dataset.companyId = action.companyId;
+        }
+
+        if (typeof action.historyIndex === "number") {
+          button.dataset.historyIndex = String(action.historyIndex);
+        }
+
+        actionsWrap.appendChild(button);
+      }
+    }
+
+    li.appendChild(actionsWrap);
+  }
+
+  return li;
+}
+
+function renderHistoryList() {
+  const history = readList(STORAGE_KEYS.history);
+  historyList.textContent = "";
+
+  if (!history.length) {
+    historyList.appendChild(createEmptyActivityItem("Nenhuma busca registrada."));
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  history.forEach((entry, index) => {
+    fragment.appendChild(
+      createActivityItem({
+        title: `Busca ${entry.category || "-"}`,
+        meta: `${formatDateTime(entry.when)} • ${entry.total || 0} resultado(s)`,
+        actions: [
+          {
+            type: "button",
+            label: "Carregar filtros",
+            action: "apply-history",
+            historyIndex: index,
+          },
+        ],
+      }),
+    );
+  });
+
+  historyList.appendChild(fragment);
+}
+
+function renderRecentList() {
+  const recent = readList(STORAGE_KEYS.recent);
+  const savedIds = getSavedIdSet();
+  recentList.textContent = "";
+
+  if (!recent.length) {
+    recentList.appendChild(createEmptyActivityItem("Nenhuma empresa recente."));
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  recent.forEach((company) => {
+    const actions = [];
+
+    if (company.maps_link) {
+      actions.push({ type: "link", label: "Mapa", href: company.maps_link });
+    }
+
+    if (savedIds.has(company.id)) {
+      actions.push({
+        type: "button",
+        label: "Remover salva",
+        action: "remove-company",
+        companyId: company.id,
+      });
+    } else {
+      actions.push({
+        type: "button",
+        label: "Salvar",
+        action: "save-company",
+        companyId: company.id,
+      });
+    }
+
+    fragment.appendChild(
+      createActivityItem({
+        title: company.name || "Sem nome",
+        meta: `${company.category || "-"} • score ${company.opportunity_score || "Baixa"}`,
+        actions,
+      }),
+    );
+  });
+
+  recentList.appendChild(fragment);
+}
+
+function renderSavedList() {
+  const saved = getSavedCompanies();
+  savedList.textContent = "";
+
+  if (!saved.length) {
+    savedList.appendChild(createEmptyActivityItem("Nenhuma empresa salva."));
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  saved.forEach((company) => {
+    const actions = [];
+
+    if (company.maps_link) {
+      actions.push({ type: "link", label: "Mapa", href: company.maps_link });
+    }
+
+    actions.push({
+      type: "button",
+      label: "Remover",
+      action: "remove-company",
+      companyId: company.id,
+    });
+
+    fragment.appendChild(
+      createActivityItem({
+        title: company.name || "Sem nome",
+        meta: `${company.category || "-"} • salvo em ${formatDateTime(company.saved_at)}`,
+        actions,
+      }),
+    );
+  });
+
+  savedList.appendChild(fragment);
+}
+
+function refreshActivityLists() {
+  renderHistoryList();
+  renderRecentList();
+  renderSavedList();
 }
 
 function activateTab(tabName) {
@@ -291,6 +592,167 @@ function activateTab(tabName) {
 
   for (const card of activityCards) {
     card.classList.toggle("is-active", card.dataset.list === tabName);
+  }
+}
+
+function setFieldValue(name, value) {
+  const field = form.elements.namedItem(name);
+  if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
+    field.value = String(value);
+  }
+}
+
+function setFieldChecked(name, checked) {
+  const field = form.elements.namedItem(name);
+  if (field instanceof HTMLInputElement) {
+    field.checked = Boolean(checked);
+  }
+}
+
+function applyCoordinates(lat, lng) {
+  setFieldValue("lat", Number(lat).toFixed(6));
+  setFieldValue("lng", Number(lng).toFixed(6));
+}
+
+function saveLastGeolocation(lat, lng) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.lastGeo,
+      JSON.stringify({
+        lat: Number(lat),
+        lng: Number(lng),
+        updated_at: new Date().toISOString(),
+      }),
+    );
+  } catch (error) {
+    console.warn("[local-rush] Falha ao persistir última geolocalização:", error);
+  }
+}
+
+function readLastGeolocation() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.lastGeo) || "null");
+    if (!parsed) {
+      return null;
+    }
+
+    const lat = Number(parsed.lat);
+    const lng = Number(parsed.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+function describeGeolocationError(error) {
+  if (!error || typeof error !== "object") {
+    return "Falha ao obter localização automática.";
+  }
+
+  switch (error.code) {
+    case 1:
+      return "Permissão de localização negada pelo navegador.";
+    case 2:
+      return "Posição indisponível no dispositivo agora.";
+    case 3:
+      return "Tempo excedido ao tentar localizar você.";
+    default:
+      return "Falha ao obter localização automática.";
+  }
+}
+
+function requestCurrentPosition(options) {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+function applyGeolocationFallback(reason) {
+  const lastGeo = readLastGeolocation();
+
+  if (lastGeo) {
+    applyCoordinates(lastGeo.lat, lastGeo.lng);
+    setError("");
+    setStatus(`${reason} Usando sua última localização válida salva.`);
+    return;
+  }
+
+  applyCoordinates(DEFAULT_FALLBACK.lat, DEFAULT_FALLBACK.lng);
+  setError("");
+  setStatus(
+    `${reason} Aplicamos ${DEFAULT_FALLBACK.label} como ponto inicial para você buscar agora.`,
+  );
+}
+
+function loadHistoryPayload(index) {
+  const history = readList(STORAGE_KEYS.history);
+  const entry = history[index];
+
+  if (!entry || !entry.payload) {
+    return;
+  }
+
+  setFieldValue("lat", entry.payload.lat);
+  setFieldValue("lng", entry.payload.lng);
+  setFieldValue("radius", entry.payload.radius);
+  setFieldValue("category", entry.payload.category);
+  setFieldValue("limit", entry.payload.limit);
+  setFieldChecked("only_with_site", entry.payload.only_with_site);
+
+  setError("");
+  setStatus("Filtros do histórico carregados no formulário.");
+}
+
+function findCompanyById(companyId) {
+  if (currentResultsById.has(companyId)) {
+    return currentResultsById.get(companyId);
+  }
+
+  const recent = readList(STORAGE_KEYS.recent);
+  const fromRecent = recent.find((item) => item.id === companyId);
+  if (fromRecent) {
+    return fromRecent;
+  }
+
+  const saved = getSavedCompanies();
+  return saved.find((item) => item.id === companyId) || null;
+}
+
+function syncAfterSavedUpdate(message) {
+  setError("");
+  setStatus(message);
+  renderResults(currentResults);
+  refreshActivityLists();
+}
+
+function handleSaveOrRemoveCompany(companyId, action) {
+  if (!companyId) {
+    return;
+  }
+
+  if (action === "remove-company") {
+    const removed = removeSavedCompany(companyId);
+    if (removed) {
+      syncAfterSavedUpdate("Empresa removida da lista de salvas.");
+    }
+    return;
+  }
+
+  const company = findCompanyById(companyId);
+  if (!company) {
+    setError("Empresa não encontrada para salvar.");
+    return;
+  }
+
+  const inserted = upsertSavedCompany(company);
+  if (inserted) {
+    syncAfterSavedUpdate("Empresa salva com sucesso.");
+  } else {
+    setStatus("Essa empresa já está na lista de salvas.");
   }
 }
 
@@ -342,13 +804,15 @@ async function handleSubmit(event) {
     }
 
     const results = Array.isArray(data.results) ? data.results : [];
-    renderResults(results);
+    currentResults = results.map((item) => normalizeCompany(item));
 
-    resultsCount.textContent = `${results.length} empresa(s) encontrada(s).`;
+    renderResults(currentResults);
+
+    resultsCount.textContent = `${currentResults.length} empresa(s) encontrada(s).`;
     setStatus("Busca concluída com sucesso.");
 
-    saveHistoryEntry(payload, results.length);
-    saveRecentEntries(results);
+    saveHistoryEntry(payload, currentResults.length);
+    saveRecentEntries(currentResults);
     refreshActivityLists();
   } catch (error) {
     console.error("[local-rush] Erro na busca:", error);
@@ -360,50 +824,133 @@ async function handleSubmit(event) {
   }
 }
 
-function handleGeolocation() {
+async function handleGeolocation() {
   clearMessages();
 
   if (!navigator.geolocation) {
     setError("Geolocalização não é suportada neste navegador.");
+    applyGeolocationFallback("Sem suporte nativo de geolocalização.");
     return;
+  }
+
+  if (navigator.permissions && typeof navigator.permissions.query === "function") {
+    try {
+      const permission = await navigator.permissions.query({ name: "geolocation" });
+      if (permission.state === "denied") {
+        applyGeolocationFallback(
+          "Permissão de localização bloqueada no navegador.",
+        );
+        return;
+      }
+    } catch (error) {
+      console.warn("[local-rush] Não foi possível consultar permissões:", error);
+    }
   }
 
   setStatus("Buscando sua localização...");
 
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const latField = form.elements.namedItem("lat");
-      const lngField = form.elements.namedItem("lng");
+  let lastError = null;
 
-      if (latField instanceof HTMLInputElement) {
-        latField.value = position.coords.latitude.toFixed(6);
-      }
+  for (let index = 0; index < GEO_ATTEMPTS.length; index += 1) {
+    const options = GEO_ATTEMPTS[index];
 
-      if (lngField instanceof HTMLInputElement) {
-        lngField.value = position.coords.longitude.toFixed(6);
-      }
-
+    try {
+      const position = await requestCurrentPosition(options);
+      applyCoordinates(position.coords.latitude, position.coords.longitude);
+      saveLastGeolocation(position.coords.latitude, position.coords.longitude);
       setStatus("Localização aplicada no formulário.");
-    },
-    () => {
-      setError("Não foi possível obter sua localização agora.");
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0,
-    },
-  );
+      setError("");
+      return;
+    } catch (error) {
+      lastError = error;
+
+      if (error && error.code === 1) {
+        applyGeolocationFallback(describeGeolocationError(error));
+        return;
+      }
+
+      if (index === 0) {
+        setStatus("Falha na primeira tentativa. Tentando novamente...");
+      }
+    }
+  }
+
+  const reason = describeGeolocationError(lastError);
+  applyGeolocationFallback(reason);
+}
+
+function handleResultsClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.action;
+  const companyId = button.dataset.companyId;
+  handleSaveOrRemoveCompany(companyId, action);
+}
+
+function handleActivityClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    return;
+  }
+
+  const action = button.dataset.action;
+
+  if (action === "quick-location") {
+    const lat = Number(button.dataset.lat);
+    const lng = Number(button.dataset.lng);
+    const label = String(button.dataset.label || "ponto rápido");
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      applyCoordinates(lat, lng);
+      setError("");
+      setStatus(`Localização rápida aplicada: ${label}.`);
+      activateTab("search");
+    }
+    return;
+  }
+
+  if (action === "retry-geolocation") {
+    handleGeolocation();
+    return;
+  }
+
+  if (action === "apply-history") {
+    const index = Number(button.dataset.historyIndex);
+    if (Number.isInteger(index) && index >= 0) {
+      loadHistoryPayload(index);
+      activateTab("search");
+    }
+    return;
+  }
+
+  const companyId = button.dataset.companyId;
+  handleSaveOrRemoveCompany(companyId, action);
 }
 
 form.addEventListener("submit", handleSubmit);
 geoButton.addEventListener("click", handleGeolocation);
+resultsBody.addEventListener("click", handleResultsClick);
+
+if (activityPanel) {
+  activityPanel.addEventListener("click", handleActivityClick);
+}
 
 for (const button of tabButtons) {
   button.addEventListener("click", () => {
-    activateTab(button.dataset.tab || "history");
+    const nextTab = button.dataset.tab || "search";
+    activateTab(nextTab);
+
+    if (nextTab === "search") {
+      const latField = form.elements.namedItem("lat");
+      if (latField instanceof HTMLInputElement) {
+        latField.focus();
+      }
+    }
   });
 }
 
-activateTab("history");
+activateTab("search");
 refreshActivityLists();

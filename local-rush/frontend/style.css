@@ -171,7 +171,8 @@ select {
 
 input:focus,
 select:focus,
-button:focus-visible {
+button:focus-visible,
+a:focus-visible {
   border-color: rgba(37, 198, 165, 0.6);
   box-shadow: 0 0 0 3px rgba(37, 198, 165, 0.16);
 }
@@ -254,7 +255,7 @@ button:focus-visible {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 640px;
+  min-width: 760px;
 }
 
 th,
@@ -274,6 +275,17 @@ th {
 
 td {
   font-size: 0.9rem;
+}
+
+.company-main {
+  display: grid;
+  gap: 2px;
+}
+
+.company-address {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .contact-group {
@@ -326,6 +338,25 @@ td {
   text-decoration: underline;
 }
 
+.table-action-button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(7, 12, 19, 0.85);
+  color: var(--text);
+  min-height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.table-action-button:hover {
+  border-color: rgba(37, 198, 165, 0.6);
+}
+
+.table-action-button.is-saved {
+  border-color: rgba(242, 164, 95, 0.5);
+  color: #ffd69f;
+}
+
 .empty-state {
   text-align: center;
   color: var(--muted);
@@ -333,9 +364,7 @@ td {
 }
 
 .activity-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: block;
 }
 
 .activity-card {
@@ -343,12 +372,11 @@ td {
   border-radius: 12px;
   padding: 12px;
   background: rgba(10, 15, 23, 0.75);
-  opacity: 0.65;
-  transition: opacity 0.2s ease, border-color 0.2s ease;
+  display: none;
 }
 
 .activity-card.is-active {
-  opacity: 1;
+  display: block;
   border-color: rgba(37, 198, 165, 0.46);
 }
 
@@ -357,12 +385,79 @@ td {
   font-size: 0.92rem;
 }
 
+.search-help-text {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.quick-location-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-location-button {
+  min-height: 30px;
+}
+
 .activity-card ul {
   margin: 0;
-  padding-left: 16px;
+  padding-left: 0;
+  list-style: none;
   color: var(--muted);
   display: grid;
   gap: 6px;
+}
+
+.activity-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(13, 19, 28, 0.75);
+  display: grid;
+  gap: 8px;
+}
+
+.activity-item-main {
+  display: grid;
+  gap: 3px;
+}
+
+.activity-title {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.activity-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.activity-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mini-button,
+.mini-link {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  min-height: 28px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(8, 14, 22, 0.82);
+  color: #dbe7fb;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mini-button:hover,
+.mini-link:hover {
+  border-color: rgba(37, 198, 165, 0.5);
 }
 
 .footer-note {
@@ -384,10 +479,6 @@ td {
 
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .activity-grid {
-    grid-template-columns: 1fr;
   }
 }
 
