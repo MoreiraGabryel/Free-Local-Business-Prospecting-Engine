@@ -179,21 +179,6 @@ SEARCHABLE_TAG_KEYS = [
     "cuisine",
 ]
 
-QUERY_KEYWORD_TAG_KEYS = [
-    "name",
-    "official_name",
-    "brand",
-    "description",
-    "shop",
-    "amenity",
-    "office",
-    "craft",
-    "tourism",
-    "healthcare",
-    "healthcare:speciality",
-    "cuisine",
-]
-
 CATEGORY_MAP: dict[str, list[tuple[str, str | None]]] = {
     "barber": [("amenity", "barber"), ("shop", "hairdresser"), ("shop", "barber")],
     "hairdresser": [("shop", "hairdresser"), ("shop", "barber")],
@@ -364,14 +349,6 @@ def _matches_by_category_tags(category: str, tags: dict[str, Any]) -> bool:
     return False
 
 
-def _keyword_regex_for_category(category: str) -> str:
-    keywords = _normalized_keywords_for_category(category)
-    if not keywords:
-        return ""
-    escaped = [re.escape(keyword) for keyword in keywords if keyword]
-    return "|".join(escaped)
-
-
 def _matches_requested_category(category: str, tags: dict[str, Any]) -> bool:
     if category == GENERAL_CONTACT_CATEGORY:
         return True
@@ -395,33 +372,14 @@ def _build_overpass_query(
     radius: int,
     limit: int,
     timeout_seconds: int,
-    keyword_regex: str,
 ) -> str:
     query_lines = [f"[out:json][timeout:{timeout_seconds}];", "("]
 
     for key, value in category_pairs:
         tag_filter = _build_tag_filter(key, value)
         query_lines.append(
-            f"  node{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
+            f"  nwr{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
         )
-        query_lines.append(
-            f"  way{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
-        )
-        query_lines.append(
-            f"  relation{tag_filter}(around:{radius},{lat:.6f},{lng:.6f});"
-        )
-
-    if keyword_regex:
-        for key in QUERY_KEYWORD_TAG_KEYS:
-            query_lines.append(
-                f'  node["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
-            )
-            query_lines.append(
-                f'  way["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
-            )
-            query_lines.append(
-                f'  relation["{key}"~"{keyword_regex}",i](around:{radius},{lat:.6f},{lng:.6f});'
-            )
 
     query_lines.append(");")
     query_lines.append(f"out center tags {limit};")
@@ -440,13 +398,7 @@ def _build_general_contact_query(
 
     for contact_key in GENERAL_CONTACT_KEYS:
         query_lines.append(
-            f'  node["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
-        )
-        query_lines.append(
-            f'  way["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
-        )
-        query_lines.append(
-            f'  relation["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
+            f'  nwr["{contact_key}"](around:{radius},{lat:.6f},{lng:.6f});'
         )
 
     query_lines.append(");")
@@ -550,6 +502,31 @@ def _request_overpass(
         "Nao foi possivel concluir a consulta ao OpenStreetMap.",
         status_code=502,
     )
+
+
+def _extract_elements(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    elements = payload.get("elements")
+    if not isinstance(elements, list):
+        raise OverpassServiceError("Resposta inesperada do OpenStreetMap.", status_code=502)
+    return [item for item in elements if isinstance(item, dict)]
+
+
+def _fetch_elements(
+    *,
+    query: str,
+    timeout_seconds: int,
+) -> list[dict[str, Any]]:
+    response = _request_overpass(query=query, timeout_seconds=timeout_seconds)
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise OverpassServiceError(
+            "O servico do OpenStreetMap retornou uma resposta invalida.",
+            status_code=502,
+        ) from exc
+
+    return _extract_elements(payload)
 
 
 def _first_non_empty(tags: dict[str, Any], keys: list[str]) -> str:
@@ -676,26 +653,6 @@ def search_overpass(
     category_pairs = CATEGORY_MAP[category]
 
     timeout_seconds = _safe_timeout()
-    if category == GENERAL_CONTACT_CATEGORY:
-        query = _build_general_contact_query(
-            lat=lat,
-            lng=lng,
-            radius=radius,
-            limit=limit,
-            timeout_seconds=timeout_seconds,
-        )
-    else:
-        keyword_regex = _keyword_regex_for_category(category)
-        query = _build_overpass_query(
-            category_pairs=category_pairs,
-            lat=lat,
-            lng=lng,
-            radius=radius,
-            limit=limit,
-            timeout_seconds=timeout_seconds,
-            keyword_regex=keyword_regex,
-        )
-
     print(
         "[local-rush] Buscando Overpass:",
         f"category={category}",
@@ -704,34 +661,71 @@ def search_overpass(
         f"only_with_site={only_with_site}",
     )
 
-    response = _request_overpass(query=query, timeout_seconds=timeout_seconds)
-
-    try:
-        payload = response.json()
-    except ValueError as exc:
-        raise OverpassServiceError(
-            "O servico do OpenStreetMap retornou uma resposta invalida.",
-            status_code=502,
-        ) from exc
-
-    elements = payload.get("elements")
-    if not isinstance(elements, list):
-        raise OverpassServiceError("Resposta inesperada do OpenStreetMap.", status_code=502)
-
-    results: list[dict[str, Any]] = []
+    elements: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
 
+    def add_elements(new_items: list[dict[str, Any]]) -> None:
+        for item in new_items:
+            osm_type = str(item.get("type", "")).strip()
+            osm_id = str(item.get("id", "")).strip()
+            if not osm_type or not osm_id:
+                continue
+            unique_id = f"{osm_type}:{osm_id}"
+            if unique_id in seen_ids:
+                continue
+            seen_ids.add(unique_id)
+            elements.append(item)
+
+    if category == GENERAL_CONTACT_CATEGORY:
+        query = _build_general_contact_query(
+            lat=lat,
+            lng=lng,
+            radius=radius,
+            limit=limit,
+            timeout_seconds=timeout_seconds,
+        )
+        add_elements(
+            _fetch_elements(
+                query=query,
+                timeout_seconds=timeout_seconds,
+            )
+        )
+    else:
+        primary_query = _build_overpass_query(
+            category_pairs=category_pairs,
+            lat=lat,
+            lng=lng,
+            radius=radius,
+            limit=max(limit * 3, 60),
+            timeout_seconds=timeout_seconds,
+        )
+        add_elements(
+            _fetch_elements(
+                query=primary_query,
+                timeout_seconds=timeout_seconds,
+            )
+        )
+
+        # Enrichment pass: broad contact query + local keyword filter.
+        enrichment_query = _build_general_contact_query(
+            lat=lat,
+            lng=lng,
+            radius=radius,
+            limit=max(limit * 4, 80),
+            timeout_seconds=max(10, timeout_seconds - 3),
+        )
+        try:
+            add_elements(
+                _fetch_elements(
+                    query=enrichment_query,
+                    timeout_seconds=max(10, timeout_seconds - 3),
+                )
+            )
+        except OverpassServiceError:
+            print("[local-rush] Enriquecimento por contato indisponivel; seguindo com base.")
+
+    results: list[dict[str, Any]] = []
     for element in elements:
-        osm_type = str(element.get("type", ""))
-        osm_id = str(element.get("id", ""))
-        if not osm_type or not osm_id:
-            continue
-
-        unique_id = f"{osm_type}:{osm_id}"
-        if unique_id in seen_ids:
-            continue
-        seen_ids.add(unique_id)
-
         normalized = _opportunity_result(
             element=element,
             category=category,
