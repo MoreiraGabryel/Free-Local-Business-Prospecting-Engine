@@ -676,6 +676,24 @@ def search_overpass(
             seen_ids.add(unique_id)
             elements.append(item)
 
+    def try_add_query(
+        *,
+        query: str,
+        query_timeout: int,
+        context: str,
+    ) -> OverpassServiceError | None:
+        try:
+            add_elements(
+                _fetch_elements(
+                    query=query,
+                    timeout_seconds=query_timeout,
+                )
+            )
+            return None
+        except OverpassServiceError as exc:
+            print("[local-rush] Falha na consulta Overpass:", context)
+            return exc
+
     if category == GENERAL_CONTACT_CATEGORY:
         query = _build_general_contact_query(
             lat=lat,
@@ -684,44 +702,70 @@ def search_overpass(
             limit=limit,
             timeout_seconds=timeout_seconds,
         )
-        add_elements(
-            _fetch_elements(
-                query=query,
-                timeout_seconds=timeout_seconds,
-            )
+        direct_error = try_add_query(
+            query=query,
+            query_timeout=timeout_seconds,
+            context="general_contact",
         )
+        if direct_error:
+            raise direct_error
     else:
+        primary_limit = max(limit * 2, 40)
         primary_query = _build_overpass_query(
             category_pairs=category_pairs,
             lat=lat,
             lng=lng,
             radius=radius,
-            limit=max(limit * 3, 60),
+            limit=primary_limit,
             timeout_seconds=timeout_seconds,
         )
-        add_elements(
-            _fetch_elements(
-                query=primary_query,
-                timeout_seconds=timeout_seconds,
-            )
+        primary_error = try_add_query(
+            query=primary_query,
+            query_timeout=timeout_seconds,
+            context=f"primary_category:{category}",
         )
+
+        if primary_error:
+            print("[local-rush] Tentando fallback por pares de categoria...")
+            pair_limit = max(limit + 8, 18)
+            pair_timeout = max(8, timeout_seconds - 6)
+            pair_successes = 0
+
+            for key, value in category_pairs:
+                pair_query = _build_overpass_query(
+                    category_pairs=[(key, value)],
+                    lat=lat,
+                    lng=lng,
+                    radius=radius,
+                    limit=pair_limit,
+                    timeout_seconds=pair_timeout,
+                )
+                pair_context = f"category_pair:{key}={value or '*'}"
+                pair_error = try_add_query(
+                    query=pair_query,
+                    query_timeout=pair_timeout,
+                    context=pair_context,
+                )
+                if pair_error is None:
+                    pair_successes += 1
+
+            if pair_successes == 0 and not elements:
+                raise primary_error
 
         # Enrichment pass: broad contact query + local keyword filter.
         enrichment_query = _build_general_contact_query(
             lat=lat,
             lng=lng,
             radius=radius,
-            limit=max(limit * 4, 80),
+            limit=max(limit * 3, 50),
             timeout_seconds=max(10, timeout_seconds - 3),
         )
-        try:
-            add_elements(
-                _fetch_elements(
-                    query=enrichment_query,
-                    timeout_seconds=max(10, timeout_seconds - 3),
-                )
-            )
-        except OverpassServiceError:
+        enrichment_error = try_add_query(
+            query=enrichment_query,
+            query_timeout=max(10, timeout_seconds - 3),
+            context=f"enrichment:{category}",
+        )
+        if enrichment_error:
             print("[local-rush] Enriquecimento por contato indisponivel; seguindo com base.")
 
     results: list[dict[str, Any]] = []
