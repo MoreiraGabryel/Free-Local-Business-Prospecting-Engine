@@ -694,6 +694,46 @@ def search_overpass(
             print("[local-rush] Falha na consulta Overpass:", context)
             return exc
 
+    def has_enough_results() -> bool:
+        matched = 0
+        for item in elements:
+            if _opportunity_result(
+                element=item,
+                category=category,
+                only_with_site=only_with_site,
+            ) is None:
+                continue
+            matched += 1
+            if matched >= limit:
+                return True
+        return False
+
+    def run_category_pair_fallback(
+        *,
+        fallback_radius: int,
+        pair_limit: int,
+        pair_timeout: int,
+    ) -> int:
+        pair_successes = 0
+        for key, value in category_pairs:
+            pair_query = _build_overpass_query(
+                category_pairs=[(key, value)],
+                lat=lat,
+                lng=lng,
+                radius=fallback_radius,
+                limit=pair_limit,
+                timeout_seconds=pair_timeout,
+            )
+            pair_context = f"category_pair:{key}={value or '*'}:radius={fallback_radius}"
+            pair_error = try_add_query(
+                query=pair_query,
+                query_timeout=pair_timeout,
+                context=pair_context,
+            )
+            if pair_error is None:
+                pair_successes += 1
+        return pair_successes
+
     if category == GENERAL_CONTACT_CATEGORY:
         query = _build_general_contact_query(
             lat=lat,
@@ -727,46 +767,50 @@ def search_overpass(
 
         if primary_error:
             print("[local-rush] Tentando fallback por pares de categoria...")
-            pair_limit = max(limit + 8, 18)
-            pair_timeout = max(8, timeout_seconds - 6)
-            pair_successes = 0
-
-            for key, value in category_pairs:
-                pair_query = _build_overpass_query(
-                    category_pairs=[(key, value)],
-                    lat=lat,
-                    lng=lng,
-                    radius=radius,
-                    limit=pair_limit,
-                    timeout_seconds=pair_timeout,
-                )
-                pair_context = f"category_pair:{key}={value or '*'}"
-                pair_error = try_add_query(
-                    query=pair_query,
-                    query_timeout=pair_timeout,
-                    context=pair_context,
-                )
-                if pair_error is None:
-                    pair_successes += 1
+            pair_limit = max(limit + 4, 14)
+            pair_timeout = max(7, timeout_seconds - 8)
+            pair_successes = run_category_pair_fallback(
+                fallback_radius=radius,
+                pair_limit=pair_limit,
+                pair_timeout=pair_timeout,
+            )
 
             if pair_successes == 0 and not elements:
-                raise primary_error
+                reduced_radius = max(600, int(radius * 0.6))
+                if reduced_radius < radius:
+                    print(
+                        "[local-rush] Fallback adicional com raio reduzido:",
+                        f"de={radius}",
+                        f"para={reduced_radius}",
+                    )
+                    reduced_pair_successes = run_category_pair_fallback(
+                        fallback_radius=reduced_radius,
+                        pair_limit=pair_limit,
+                        pair_timeout=pair_timeout,
+                    )
+                    if reduced_pair_successes == 0 and not elements:
+                        raise primary_error
+                else:
+                    raise primary_error
 
-        # Enrichment pass: broad contact query + local keyword filter.
-        enrichment_query = _build_general_contact_query(
-            lat=lat,
-            lng=lng,
-            radius=radius,
-            limit=max(limit * 3, 50),
-            timeout_seconds=max(10, timeout_seconds - 3),
-        )
-        enrichment_error = try_add_query(
-            query=enrichment_query,
-            query_timeout=max(10, timeout_seconds - 3),
-            context=f"enrichment:{category}",
-        )
-        if enrichment_error:
-            print("[local-rush] Enriquecimento por contato indisponivel; seguindo com base.")
+        if has_enough_results():
+            print("[local-rush] Resultado base suficiente; pulando enriquecimento.")
+        else:
+            # Enrichment pass: broad contact query + local keyword filter.
+            enrichment_query = _build_general_contact_query(
+                lat=lat,
+                lng=lng,
+                radius=radius,
+                limit=max(limit * 3, 50),
+                timeout_seconds=max(10, timeout_seconds - 3),
+            )
+            enrichment_error = try_add_query(
+                query=enrichment_query,
+                query_timeout=max(10, timeout_seconds - 3),
+                context=f"enrichment:{category}",
+            )
+            if enrichment_error:
+                print("[local-rush] Enriquecimento por contato indisponivel; seguindo com base.")
 
     results: list[dict[str, Any]] = []
     for element in elements:

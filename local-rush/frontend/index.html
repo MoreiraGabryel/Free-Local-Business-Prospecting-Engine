@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Local Rush</title>
-    <link rel="stylesheet" href="/static/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="/static/style.css?v=6" />
   </head>
   <body>
     <main class="app-shell">
@@ -147,6 +152,23 @@
 
       <section class="panel">
         <div class="panel-header">
+          <h2>Mapa da busca</h2>
+          <p>Centro, raio e empresas encontradas.</p>
+        </div>
+        <div class="map-shell">
+          <div id="map" role="region" aria-label="Mapa de resultados da busca"></div>
+          <iframe
+            id="map-preview"
+            class="map-preview"
+            title="Prévia do mapa da busca"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
           <h2>Resultados</h2>
           <p id="results-count">Nenhuma busca realizada.</p>
         </div>
@@ -263,6 +285,11 @@
       </footer>
     </main>
 
-    <script src="/static/script.js" defer></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+      defer
+    ></script>
+    <script src="/static/script.js?v=6" defer></script>
   </body>
 </html>

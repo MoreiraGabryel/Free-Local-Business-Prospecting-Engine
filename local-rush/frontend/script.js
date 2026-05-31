@@ -8,6 +8,9 @@ const errorMessage = document.getElementById("error-message");
 const resultsCount = document.getElementById("results-count");
 const resultsBody = document.getElementById("results-body");
 const activityPanel = document.getElementById("activity-panel");
+const mapShell = document.querySelector(".map-shell");
+const mapContainer = document.getElementById("map");
+const mapPreview = document.getElementById("map-preview");
 
 const historyList = document.getElementById("history-list");
 const recentList = document.getElementById("recent-list");
@@ -58,6 +61,12 @@ const RADIUS_LEVELS = {
   high: 3000,
   max: 5000,
 };
+
+let searchMap = null;
+let mapLayerGroup = null;
+let mapInitRetries = 0;
+
+const MAX_MAP_INIT_RETRIES = 12;
 
 function readList(key) {
   try {
@@ -610,6 +619,7 @@ function clearLocalData() {
   refreshActivityLists();
   setError("");
   setStatus("Dados locais foram limpos com sucesso.");
+  updateMapFromFormSelection();
 }
 
 function activateTab(tabName) {
@@ -670,9 +680,279 @@ function levelFromRadius(radius) {
   return "max";
 }
 
+function setMapModeFallback(enabled) {
+  if (!mapShell) {
+    return;
+  }
+
+  mapShell.classList.toggle("is-fallback", Boolean(enabled));
+}
+
+function ensureMapShellHeight() {
+  if (!mapShell) {
+    return;
+  }
+
+  const currentHeight = mapShell.getBoundingClientRect().height;
+  if (currentHeight >= 120) {
+    return;
+  }
+
+  mapShell.style.height = window.innerWidth <= 640 ? "320px" : "420px";
+}
+
+function buildEmbedMapUrl(lat, lng, radius) {
+  const safeLat = Number(lat);
+  const safeLng = Number(lng);
+  const safeRadius = Number(radius);
+
+  if (
+    !Number.isFinite(safeLat) ||
+    !Number.isFinite(safeLng) ||
+    !Number.isFinite(safeRadius) ||
+    safeRadius <= 0
+  ) {
+    return "";
+  }
+
+  const latDelta = safeRadius / 111320;
+  const cosLat = Math.cos((safeLat * Math.PI) / 180);
+  const lngDelta = safeRadius / (111320 * Math.max(Math.abs(cosLat), 0.2));
+
+  const minLat = safeLat - latDelta;
+  const maxLat = safeLat + latDelta;
+  const minLng = safeLng - lngDelta;
+  const maxLng = safeLng + lngDelta;
+
+  const bbox = [
+    minLng.toFixed(6),
+    minLat.toFixed(6),
+    maxLng.toFixed(6),
+    maxLat.toFixed(6),
+  ].join("%2C");
+  const marker = `${safeLat.toFixed(6)}%2C${safeLng.toFixed(6)}`;
+
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
+}
+
+function updateMapPreview(lat, lng, radius) {
+  if (!mapPreview) {
+    return;
+  }
+
+  const nextSrc = buildEmbedMapUrl(lat, lng, radius);
+  if (!nextSrc) {
+    return;
+  }
+
+  if (mapPreview.src !== nextSrc) {
+    mapPreview.src = nextSrc;
+  }
+}
+
+function getRadiusFromForm() {
+  const radiusField = form.elements.namedItem("radius_level");
+  const rawLevel =
+    radiusField instanceof HTMLSelectElement ? radiusField.value : "medium";
+  return radiusFromLevel(rawLevel);
+}
+
+function clearMapLayers() {
+  if (mapLayerGroup) {
+    mapLayerGroup.clearLayers();
+  }
+}
+
+function createResultPopupContent(company) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "map-popup";
+
+  const title = document.createElement("strong");
+  title.textContent = company.name || "Sem nome";
+  wrapper.appendChild(title);
+
+  const address = document.createElement("p");
+  address.textContent = company.address || "Endereço não informado";
+  wrapper.appendChild(address);
+
+  if (company.phone) {
+    const phone = document.createElement("p");
+    phone.textContent = `Telefone: ${company.phone}`;
+    wrapper.appendChild(phone);
+  }
+
+  if (company.website) {
+    const websiteLink = document.createElement("a");
+    websiteLink.href = company.website;
+    websiteLink.target = "_blank";
+    websiteLink.rel = "noopener noreferrer";
+    websiteLink.textContent = "Abrir website";
+    wrapper.appendChild(websiteLink);
+  }
+
+  return wrapper;
+}
+
+function addResultMarkers(results, bounds) {
+  if (!searchMap || !mapLayerGroup) {
+    return 0;
+  }
+
+  let markerCount = 0;
+
+  for (const rawItem of results) {
+    const company = normalizeCompany(rawItem);
+    if (!Number.isFinite(company.lat) || !Number.isFinite(company.lng)) {
+      continue;
+    }
+
+    const marker = window.L.marker([company.lat, company.lng]);
+    marker.bindPopup(createResultPopupContent(company));
+    marker.addTo(mapLayerGroup);
+    bounds.extend([company.lat, company.lng]);
+    markerCount += 1;
+  }
+
+  return markerCount;
+}
+
+function updateSearchMap(searchPayload, results = []) {
+  const lat = Number(searchPayload?.lat);
+  const lng = Number(searchPayload?.lng);
+  const radius = Number(searchPayload?.radius);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return;
+  }
+
+  const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 1000;
+  const center = [lat, lng];
+  updateMapPreview(lat, lng, safeRadius);
+
+  if (!searchMap || !mapLayerGroup || !window.L) {
+    setMapModeFallback(true);
+    return;
+  }
+
+  setMapModeFallback(false);
+
+  clearMapLayers();
+
+  const circle = window.L.circle(center, {
+    radius: safeRadius,
+    color: "#1f7ae0",
+    fillColor: "#3b82f6",
+    fillOpacity: 0.14,
+    weight: 2,
+  }).addTo(mapLayerGroup);
+
+  const centerMarker = window.L.marker(center).addTo(mapLayerGroup);
+  centerMarker.bindPopup("Ponto central da busca");
+
+  const bounds = circle.getBounds();
+  const addedMarkers = addResultMarkers(results, bounds);
+
+  if (addedMarkers > 0) {
+    searchMap.fitBounds(bounds, {
+      padding: [28, 28],
+      maxZoom: 15,
+    });
+  } else {
+    searchMap.fitBounds(circle.getBounds(), {
+      padding: [24, 24],
+    });
+  }
+
+  setTimeout(() => {
+    if (searchMap) {
+      searchMap.invalidateSize();
+    }
+  }, 80);
+}
+
+function updateMapFromFormSelection() {
+  const latField = form.elements.namedItem("lat");
+  const lngField = form.elements.namedItem("lng");
+  if (!(latField instanceof HTMLInputElement) || !(lngField instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const lat = Number(latField.value);
+  const lng = Number(lngField.value);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return;
+  }
+
+  updateSearchMap(
+    {
+      lat,
+      lng,
+      radius: getRadiusFromForm(),
+    },
+    [],
+  );
+}
+
+function initMap() {
+  if (!mapContainer) {
+    return;
+  }
+
+  ensureMapShellHeight();
+  updateMapPreview(DEFAULT_FALLBACK.lat, DEFAULT_FALLBACK.lng, getRadiusFromForm());
+
+  if (!window.L || typeof window.L.map !== "function") {
+    setMapModeFallback(true);
+    mapInitRetries += 1;
+    if (mapInitRetries <= MAX_MAP_INIT_RETRIES) {
+      setTimeout(() => {
+        initMap();
+      }, 350);
+    } else {
+      console.warn("[local-rush] Leaflet indisponivel; usando pre-visualizacao do mapa.");
+    }
+    return;
+  }
+
+  if (searchMap) {
+    setMapModeFallback(false);
+    return;
+  }
+
+  try {
+    searchMap = window.L.map(mapContainer, {
+      zoomControl: true,
+    });
+
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(searchMap);
+
+    mapLayerGroup = window.L.layerGroup().addTo(searchMap);
+    setMapModeFallback(false);
+
+    updateSearchMap(
+      {
+        lat: DEFAULT_FALLBACK.lat,
+        lng: DEFAULT_FALLBACK.lng,
+        radius: getRadiusFromForm(),
+      },
+      [],
+    );
+  } catch (error) {
+    console.warn("[local-rush] Falha ao iniciar Leaflet; mantendo pre-visualizacao.", error);
+    searchMap = null;
+    mapLayerGroup = null;
+    setMapModeFallback(true);
+  }
+}
+
 function applyCoordinates(lat, lng) {
   setFieldValue("lat", Number(lat).toFixed(6));
   setFieldValue("lng", Number(lng).toFixed(6));
+  updateMapFromFormSelection();
 }
 
 function saveLastGeolocation(lat, lng) {
@@ -772,6 +1052,7 @@ function loadHistoryPayload(index) {
 
   setError("");
   setStatus("Filtros do histórico carregados no formulário.");
+  updateMapFromFormSelection();
 }
 
 function findCompanyById(companyId) {
@@ -937,6 +1218,14 @@ async function handleSubmit(event) {
     currentResults = results.map((item) => normalizeCompany(item));
 
     renderResults(currentResults);
+    updateSearchMap(
+      {
+        lat: payload.lat,
+        lng: payload.lng,
+        radius: payload.radius,
+      },
+      currentResults,
+    );
 
     resultsCount.textContent = `${currentResults.length} empresa(s) encontrada(s).`;
     setStatus("Busca concluída com sucesso.");
@@ -1082,6 +1371,27 @@ if (locationQueryInput) {
 }
 resultsBody.addEventListener("click", handleResultsClick);
 
+const radiusLevelField = form.elements.namedItem("radius_level");
+if (radiusLevelField instanceof HTMLSelectElement) {
+  radiusLevelField.addEventListener("change", () => {
+    updateMapFromFormSelection();
+  });
+}
+
+const latField = form.elements.namedItem("lat");
+if (latField instanceof HTMLInputElement) {
+  latField.addEventListener("change", () => {
+    updateMapFromFormSelection();
+  });
+}
+
+const lngField = form.elements.namedItem("lng");
+if (lngField instanceof HTMLInputElement) {
+  lngField.addEventListener("change", () => {
+    updateMapFromFormSelection();
+  });
+}
+
 if (activityPanel) {
   activityPanel.addEventListener("click", handleActivityClick);
 }
@@ -1102,3 +1412,11 @@ for (const button of tabButtons) {
 
 activateTab("search");
 refreshActivityLists();
+initMap();
+
+window.addEventListener("resize", () => {
+  ensureMapShellHeight();
+  if (searchMap) {
+    searchMap.invalidateSize();
+  }
+});

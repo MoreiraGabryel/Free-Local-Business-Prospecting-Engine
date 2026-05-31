@@ -262,6 +262,75 @@ a:focus-visible {
   color: var(--muted);
 }
 
+.map-shell {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: rgba(6, 11, 17, 0.9);
+}
+
+#map,
+.map-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#map {
+  z-index: 1;
+}
+
+.map-preview {
+  z-index: 2;
+  display: none;
+  border: 0;
+  background: rgba(6, 11, 17, 0.94);
+}
+
+.map-shell.is-fallback #map {
+  display: none;
+}
+
+.map-shell.is-fallback .map-preview {
+  display: block;
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.map-popup {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+}
+
+.map-popup strong {
+  font-size: 0.86rem;
+  color: #0f1724;
+}
+
+.map-popup p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: #2a3a52;
+}
+
+.map-popup a {
+  font-size: 0.78rem;
+  color: #165dd9;
+  text-decoration: none;
+}
+
+.map-popup a:hover {
+  text-decoration: underline;
+}
+
 .results-wrap {
   overflow: auto;
   border: 1px solid var(--border);
@@ -517,6 +586,10 @@ td {
 
   .button {
     width: 100%;
+  }
+
+  .map-shell {
+    height: 320px;
   }
 }
 
