@@ -6,10 +6,9 @@
     <title>Local Rush</title>
     <link
       rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      crossorigin=""
+      href="/static/assets/vendor/leaflet/leaflet.css"
     />
-    <link rel="stylesheet" href="/static/style.css?v=6" />
+    <link rel="stylesheet" href="/static/style.css?v=11" />
   </head>
   <body>
     <main class="app-shell">
@@ -153,7 +152,12 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Mapa da busca</h2>
-          <p>Centro, raio e empresas encontradas.</p>
+          <div class="map-tools">
+            <p id="map-status">Centro, raio e empresas encontradas.</p>
+            <button id="fit-map-button" class="mini-button" type="button">
+              Ajustar mapa aos resultados
+            </button>
+          </div>
         </div>
         <div class="map-shell">
           <div id="map" role="region" aria-label="Mapa de resultados da busca"></div>
@@ -286,10 +290,9 @@
     </main>
 
     <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      crossorigin=""
+      src="/static/assets/vendor/leaflet/leaflet.js"
       defer
     ></script>
-    <script src="/static/script.js?v=6" defer></script>
+    <script src="/static/script.js?v=11" defer></script>
   </body>
 </html>

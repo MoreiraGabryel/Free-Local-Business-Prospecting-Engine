@@ -11,6 +11,8 @@ const activityPanel = document.getElementById("activity-panel");
 const mapShell = document.querySelector(".map-shell");
 const mapContainer = document.getElementById("map");
 const mapPreview = document.getElementById("map-preview");
+const mapStatus = document.getElementById("map-status");
+const fitMapButton = document.getElementById("fit-map-button");
 
 const historyList = document.getElementById("history-list");
 const recentList = document.getElementById("recent-list");
@@ -33,6 +35,7 @@ const STORAGE_LIMITS = {
 };
 
 const currentResultsById = new Map();
+const currentMarkersById = new Map();
 let currentResults = [];
 let isLoading = false;
 
@@ -65,6 +68,7 @@ const RADIUS_LEVELS = {
 let searchMap = null;
 let mapLayerGroup = null;
 let mapInitRetries = 0;
+let currentMapBounds = null;
 
 const MAX_MAP_INIT_RETRIES = 12;
 
@@ -109,12 +113,14 @@ function normalizeCompany(rawCompany) {
   const safeName = String(rawCompany.name || "Sem nome").trim() || "Sem nome";
   const safeCategory = String(rawCompany.category || "-").trim() || "-";
 
-  const id = [
+  const computedId = [
     safeName.toLowerCase(),
     safeCategory.toLowerCase(),
     Number.isFinite(lat) ? lat.toFixed(6) : "",
     Number.isFinite(lng) ? lng.toFixed(6) : "",
   ].join("|");
+  const providedId = typeof rawCompany.id === "string" ? rawCompany.id.trim() : "";
+  const id = providedId || computedId;
 
   return {
     id,
@@ -179,6 +185,12 @@ function setError(message) {
 function clearMessages() {
   setStatus("");
   setError("");
+}
+
+function setMapStatus(message) {
+  if (mapStatus) {
+    mapStatus.textContent = message;
+  }
 }
 
 function showEmptyResults(message) {
@@ -326,6 +338,18 @@ function createActionCell(company, isSaved) {
   }
 
   button.dataset.companyId = company.id;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSaveOrRemoveCompany(
+      company.id,
+      button.dataset.action || "save-company",
+      company,
+    );
+  });
+  button.addEventListener("pointerup", (event) => {
+    event.stopPropagation();
+  });
   td.appendChild(button);
   return td;
 }
@@ -347,6 +371,22 @@ function renderResults(results) {
     const normalized = normalizeCompany(company);
 
     currentResultsById.set(normalized.id, normalized);
+    row.dataset.companyId = normalized.id;
+    row.setAttribute("aria-selected", "false");
+    row.tabIndex = 0;
+    row.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("a,button")) {
+        return;
+      }
+      focusCompanyOnMap(normalized.id);
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      focusCompanyOnMap(normalized.id);
+    });
 
     row.appendChild(createCompanyCell(normalized));
     row.appendChild(createCell(normalized.category));
@@ -761,6 +801,80 @@ function clearMapLayers() {
   if (mapLayerGroup) {
     mapLayerGroup.clearLayers();
   }
+  currentMarkersById.clear();
+  currentMapBounds = null;
+}
+
+function clearSelectedCompany() {
+  const selectedRows = resultsBody.querySelectorAll("tr.is-map-selected");
+  for (const row of selectedRows) {
+    row.classList.remove("is-map-selected");
+    row.setAttribute("aria-selected", "false");
+  }
+}
+
+function highlightCompanyRow(companyId) {
+  clearSelectedCompany();
+
+  const rows = Array.from(resultsBody.querySelectorAll("tr[data-company-id]"));
+  const row = rows.find((item) => item.dataset.companyId === companyId);
+  if (!row) {
+    return;
+  }
+
+  row.classList.add("is-map-selected");
+  row.setAttribute("aria-selected", "true");
+  row.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+  });
+}
+
+function focusCompanyOnMap(companyId) {
+  highlightCompanyRow(companyId);
+  const company = currentResultsById.get(companyId) || findCompanyById(companyId);
+  if (!company) {
+    setMapStatus("Empresa selecionada sem dados completos para abrir no mapa.");
+    return;
+  }
+
+  if (!Number.isFinite(company.lat) || !Number.isFinite(company.lng)) {
+    setMapStatus("Empresa selecionada sem coordenadas para centralizar no mapa.");
+    return;
+  }
+
+  updateMapPreview(company.lat, company.lng, getRadiusFromForm());
+
+  if (mapShell) {
+    mapShell.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  }
+
+  const marker = currentMarkersById.get(companyId);
+  if (!searchMap || !marker) {
+    setMapStatus("Prévia atualizada para a empresa selecionada.");
+    return;
+  }
+
+  searchMap.setView([company.lat, company.lng], Math.max(searchMap.getZoom(), 16), {
+    animate: true,
+  });
+  marker.openPopup();
+}
+
+function fitMapToCurrentResults() {
+  if (searchMap && currentMapBounds) {
+    searchMap.fitBounds(currentMapBounds, {
+      padding: [28, 28],
+      maxZoom: 15,
+    });
+    searchMap.invalidateSize();
+    return;
+  }
+
+  updateMapFromFormSelection();
 }
 
 function createResultPopupContent(company) {
@@ -808,7 +922,20 @@ function addResultMarkers(results, bounds) {
 
     const marker = window.L.marker([company.lat, company.lng]);
     marker.bindPopup(createResultPopupContent(company));
+    const selectMarkerCompany = () => {
+      highlightCompanyRow(company.id);
+      updateMapPreview(company.lat, company.lng, getRadiusFromForm());
+      setMapStatus(`Empresa selecionada: ${company.name}.`);
+    };
+    marker.on("click", selectMarkerCompany);
+    marker.on("popupopen", selectMarkerCompany);
     marker.addTo(mapLayerGroup);
+    const markerElement = marker.getElement();
+    if (markerElement) {
+      markerElement.dataset.companyId = company.id;
+      markerElement.addEventListener("click", selectMarkerCompany);
+    }
+    currentMarkersById.set(company.id, marker);
     bounds.extend([company.lat, company.lng]);
     markerCount += 1;
   }
@@ -827,16 +954,24 @@ function updateSearchMap(searchPayload, results = []) {
 
   const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : 1000;
   const center = [lat, lng];
+  const safeResults = Array.isArray(results) ? results : [];
+  const missingCoordinates = safeResults.filter((item) => {
+    const company = normalizeCompany(item);
+    return !Number.isFinite(company.lat) || !Number.isFinite(company.lng);
+  }).length;
+
   updateMapPreview(lat, lng, safeRadius);
 
   if (!searchMap || !mapLayerGroup || !window.L) {
     setMapModeFallback(true);
+    setMapStatus("Prévia do mapa carregada.");
     return;
   }
 
   setMapModeFallback(false);
 
   clearMapLayers();
+  clearSelectedCompany();
 
   const circle = window.L.circle(center, {
     radius: safeRadius,
@@ -850,7 +985,8 @@ function updateSearchMap(searchPayload, results = []) {
   centerMarker.bindPopup("Ponto central da busca");
 
   const bounds = circle.getBounds();
-  const addedMarkers = addResultMarkers(results, bounds);
+  const addedMarkers = addResultMarkers(safeResults, bounds);
+  currentMapBounds = bounds;
 
   if (addedMarkers > 0) {
     searchMap.fitBounds(bounds, {
@@ -861,6 +997,16 @@ function updateSearchMap(searchPayload, results = []) {
     searchMap.fitBounds(circle.getBounds(), {
       padding: [24, 24],
     });
+  }
+
+  if (missingCoordinates > 0) {
+    setMapStatus(
+      `${addedMarkers} marcador(es) no mapa. ${missingCoordinates} resultado(s) sem coordenadas.`,
+    );
+  } else if (safeResults.length > 0) {
+    setMapStatus(`${addedMarkers} marcador(es) no mapa.`);
+  } else {
+    setMapStatus("Centro e raio da busca no mapa.");
   }
 
   setTimeout(() => {
@@ -924,6 +1070,7 @@ function initMap() {
     searchMap = window.L.map(mapContainer, {
       zoomControl: true,
     });
+    searchMap.setView([DEFAULT_FALLBACK.lat, DEFAULT_FALLBACK.lng], 13);
 
     window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -1060,6 +1207,11 @@ function findCompanyById(companyId) {
     return currentResultsById.get(companyId);
   }
 
+  const fromCurrentResults = currentResults.find((item) => item.id === companyId);
+  if (fromCurrentResults) {
+    return fromCurrentResults;
+  }
+
   const recent = readList(STORAGE_KEYS.recent);
   const fromRecent = recent.find((item) => item.id === companyId);
   if (fromRecent) {
@@ -1077,7 +1229,7 @@ function syncAfterSavedUpdate(message) {
   refreshActivityLists();
 }
 
-function handleSaveOrRemoveCompany(companyId, action) {
+function handleSaveOrRemoveCompany(companyId, action, companyHint = null) {
   if (!companyId) {
     return;
   }
@@ -1090,7 +1242,7 @@ function handleSaveOrRemoveCompany(companyId, action) {
     return;
   }
 
-  const company = findCompanyById(companyId);
+  const company = companyHint ? normalizeCompany(companyHint) : findCompanyById(companyId);
   if (!company) {
     setError("Empresa não encontrada para salvar.");
     return;
@@ -1300,14 +1452,72 @@ async function handleGeolocation() {
 }
 
 function handleResultsClick(event) {
-  const button = event.target.closest("button[data-action]");
-  if (!button) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) {
     return;
   }
 
-  const action = button.dataset.action;
-  const companyId = button.dataset.companyId;
-  handleSaveOrRemoveCompany(companyId, action);
+  const button = target.closest("button[data-action]");
+  if (button) {
+    event.preventDefault();
+    event.stopPropagation();
+    const action = button.dataset.action;
+    const companyId = button.dataset.companyId;
+    handleSaveOrRemoveCompany(companyId, action);
+    return;
+  }
+
+  if (target.closest("a")) {
+    return;
+  }
+
+  const row = target.closest("tr[data-company-id]");
+  if (row) {
+    focusCompanyOnMap(row.dataset.companyId || "");
+  }
+}
+
+function handleResultsKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  const target = event.target instanceof Element ? event.target : null;
+  const row = target ? target.closest("tr[data-company-id]") : null;
+  if (!row) {
+    return;
+  }
+
+  event.preventDefault();
+  focusCompanyOnMap(row.dataset.companyId || "");
+}
+
+function handleResultsCaptureClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || !resultsBody.contains(target)) {
+    return;
+  }
+
+  const button = target.closest("button[data-action]");
+  if (button) {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSaveOrRemoveCompany(
+      button.dataset.companyId || "",
+      button.dataset.action || "save-company",
+    );
+    return;
+  }
+
+  if (target.closest("a")) {
+    return;
+  }
+
+  const row = target.closest("tr[data-company-id]");
+  if (row) {
+    event.stopPropagation();
+    focusCompanyOnMap(row.dataset.companyId || "");
+  }
 }
 
 function handleActivityClick(event) {
@@ -1370,6 +1580,12 @@ if (locationQueryInput) {
   });
 }
 resultsBody.addEventListener("click", handleResultsClick);
+resultsBody.addEventListener("keydown", handleResultsKeydown);
+document.addEventListener("click", handleResultsCaptureClick, true);
+
+if (fitMapButton) {
+  fitMapButton.addEventListener("click", fitMapToCurrentResults);
+}
 
 const radiusLevelField = form.elements.namedItem("radius_level");
 if (radiusLevelField instanceof HTMLSelectElement) {
