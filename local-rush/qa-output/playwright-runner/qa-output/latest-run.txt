@@ -1,0 +1,400 @@
+{
+  "startedAt": "2026-06-04T17:49:40.676Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:8000",
+    "outDir": "C:\\Users\\Micro\\Desktop\\CodexSkillPack\\local-rush\\qa-output\\playwright-runner\\qa-output"
+  },
+  "tests": [
+    {
+      "name": "Carregamento visual desktop",
+      "verdict": "PASS",
+      "evidence": {
+        "title": "Local Rush",
+        "h1": "Prospecção local com dados abertos",
+        "appFrame": true,
+        "sidebar": true,
+        "visiblePanels": 4,
+        "bodyTheme": "light",
+        "mapShellClass": "map-shell",
+        "mapRect": {
+          "x": 743.765625,
+          "y": 243,
+          "width": 651.234375,
+          "height": 599.640625,
+          "top": 243,
+          "right": 1395,
+          "bottom": 842.640625,
+          "left": 743.765625
+        },
+        "horizontalOverflow": false
+      },
+      "observations": []
+    },
+    {
+      "name": "Abas da sidebar",
+      "verdict": "PASS",
+      "evidence": [
+        {
+          "tab": "search",
+          "activeButton": true,
+          "activeCard": true,
+          "activeTitle": "Nova busca"
+        },
+        {
+          "tab": "history",
+          "activeButton": true,
+          "activeCard": true,
+          "activeTitle": "Histórico"
+        },
+        {
+          "tab": "recent",
+          "activeButton": true,
+          "activeCard": true,
+          "activeTitle": "Empresas recentes"
+        },
+        {
+          "tab": "saved",
+          "activeButton": true,
+          "activeCard": true,
+          "activeTitle": "Empresas salvas"
+        }
+      ],
+      "observations": []
+    },
+    {
+      "name": "Tema claro/escuro e persistência após reload",
+      "verdict": "PASS",
+      "evidence": {
+        "beforeTheme": {
+          "theme": "dark",
+          "label": "Tema claro",
+          "stored": "dark"
+        },
+        "lightTheme": {
+          "theme": "light",
+          "label": "Tema escuro",
+          "stored": "light",
+          "pressed": "true"
+        },
+        "darkTheme": {
+          "theme": "dark",
+          "label": "Tema claro",
+          "stored": "dark",
+          "pressed": "false"
+        },
+        "afterReloadTheme": {
+          "theme": "dark",
+          "label": "Tema claro",
+          "stored": "dark",
+          "pressed": "false"
+        }
+      },
+      "observations": []
+    },
+    {
+      "name": "Busca simples: mapa, resultados, score e links",
+      "verdict": "PASS",
+      "evidence": {
+        "apiRequest": {
+          "lat": -23.55052,
+          "lng": -46.633308,
+          "radius": 1500,
+          "category": "restaurant",
+          "limit": 5,
+          "only_with_site": false
+        },
+        "apiStatus": 200,
+        "apiBody": {
+          "total": 5,
+          "results": [
+            {
+              "name": "Estadão Bar & Lanches",
+              "category": "restaurant",
+              "address": "Viaduto Nove de Julho 193 - Centro, São Paulo",
+              "phone": "+55 11 3257-7121;+55 11 3256-3700",
+              "whatsapp": "",
+              "email": "comercial@estadaolanches.com.br",
+              "website": "http://www.estadaolanches.com.br/",
+              "maps_link": "https://www.openstreetmap.org/?mlat=-23.548750&mlon=-46.642632&zoom=18",
+              "lat": -23.5487497,
+              "lng": -46.6426322,
+              "opening_hours": "24/7",
+              "opportunity_score": "Alta"
+            },
+            {
+              "name": "Apfel",
+              "category": "restaurant",
+              "address": "Rua Dom José de Barros 99 - São Paulo",
+              "phone": "+55 11 3256 7909",
+              "whatsapp": "",
+              "email": "",
+              "website": "https://www.apfel.com.br/",
+              "maps_link": "https://www.openstreetmap.org/?mlat=-23.544622&mlon=-46.641057&zoom=18",
+              "lat": -23.5446224,
+              "lng": -46.641057,
+              "opening_hours": "Mo-Sa 11:00-15:00",
+              "opportunity_score": "Média"
+            },
+            {
+              "name": "Feijão de Corda",
+              "category": "restaurant",
+              "address": "Rua Jaceguai 428 - Bixiga, São Paulo",
+              "phone": "+55 11 3105-8463",
+              "whatsapp": "",
+              "email": "",
+              "website": "https://www.facebook.com/feijaodecordacentro/",
+              "maps_link": "https://www.openstreetmap.org/?mlat=-23.555288&mlon=-46.640324&zoom=18",
+              "lat": -23.5552879,
+              "lng": -46.6403238,
+              "opening_hours": "Mo-Su 11:00-23:00",
+              "opportunity_score": "Média"
+            },
+            {
+              "name": "Lamen Kazu",
+              "category": "restaurant",
+              "address": "Rua Tomás Gonzaga 51 - Liberdade, São Paulo",
+              "phone": "+55 11 3277-4286",
+              "whatsapp": "",
+              "email": "",
+              "website": "https://lamenkazu.com.br/",
+              "maps_link": "https://www.openstreetmap.org/?mlat=-23.557680&mlon=-46.635899&zoom=18",
+              "lat": -23.55768,
+              "lng": -46.635899,
+              "opening_hours": "Mo-Sa 11:00-15:00,18:00-22:30; Su,PH 11:00-15:00,18:00-21:00",
+              "opportunity_score": "Média"
+            },
+            {
+              "name": "Paribar",
+              "category": "restaurant",
+              "address": "praça dom josé gaspar 42 - São Paulo",
+              "phone": "+55 11 3159-0219",
+              "whatsapp": "",
+              "email": "",
+              "website": "https://www.paribar.com.br/",
+              "maps_link": "https://www.openstreetmap.org/?mlat=-23.546468&mlon=-46.641843&zoom=18",
+              "lat": -23.5464681,
+              "lng": -46.6418431,
+              "opening_hours": "",
+              "opportunity_score": "Média"
+            }
+          ],
+          "attribution": "Dados © OpenStreetMap contributors, licença ODbL"
+        },
+        "ui": {
+          "statusMessage": "Busca concluída com sucesso.",
+          "errorMessage": "",
+          "resultsCount": "5 empresa(s) encontrada(s).",
+          "rowCount": 5,
+          "mapShellClass": "map-shell",
+          "mapStatus": "5 marcador(es) no mapa.",
+          "leafletMarkers": 6,
+          "fallbackIframeSrc": "https://www.openstreetmap.org/export/embed.html?bbox=-46.648007%2C-23.563995%2C-46.618609%2C-23.537045&layer=mapnik&marker=-23.550520%2C-46.633308",
+          "firstRowText": "Estadão Bar & Lanches\nViaduto Nove de Julho 193 - Centro, São Paulo\n\trestaurant\t\nTelefone: +55 11 3257-7121;+55 11 3256-3700\nEmail: comercial@estadaolanches.com.br\nWebsite\n\tAlta\tAbrir mapa\tSalvar empresa",
+          "firstLinks": [
+            {
+              "text": "Telefone: +55 11 3257-7121;+55 11 3256-3700",
+              "href": "tel:+551132577121+551132563700",
+              "target": null,
+              "rel": null,
+              "className": ""
+            },
+            {
+              "text": "Email: comercial@estadaolanches.com.br",
+              "href": "mailto:comercial@estadaolanches.com.br",
+              "target": null,
+              "rel": null,
+              "className": ""
+            },
+            {
+              "text": "Website",
+              "href": "http://www.estadaolanches.com.br/",
+              "target": "_blank",
+              "rel": "noopener noreferrer",
+              "className": ""
+            },
+            {
+              "text": "Abrir mapa",
+              "href": "https://www.openstreetmap.org/?mlat=-23.548750&mlon=-46.642632&zoom=18",
+              "target": "_blank",
+              "rel": "noopener noreferrer",
+              "className": "map-link"
+            }
+          ],
+          "badges": [
+            {
+              "text": "Alta",
+              "className": "badge badge-alta",
+              "bg": "linear-gradient(rgb(184, 255, 104), rgb(119, 223, 84))",
+              "color": "rgb(6, 19, 18)"
+            },
+            {
+              "text": "Média",
+              "className": "badge badge-media",
+              "bg": "linear-gradient(rgb(255, 212, 138), rgb(239, 168, 77))",
+              "color": "rgb(36, 21, 5)"
+            },
+            {
+              "text": "Média",
+              "className": "badge badge-media",
+              "bg": "linear-gradient(rgb(255, 212, 138), rgb(239, 168, 77))",
+              "color": "rgb(36, 21, 5)"
+            },
+            {
+              "text": "Média",
+              "className": "badge badge-media",
+              "bg": "linear-gradient(rgb(255, 212, 138), rgb(239, 168, 77))",
+              "color": "rgb(36, 21, 5)"
+            },
+            {
+              "text": "Média",
+              "className": "badge badge-media",
+              "bg": "linear-gradient(rgb(255, 212, 138), rgb(239, 168, 77))",
+              "color": "rgb(36, 21, 5)"
+            }
+          ],
+          "historyCount": 1,
+          "recentCount": 5
+        }
+      },
+      "observations": []
+    },
+    {
+      "name": "Seleção de resultado sincroniza com mapa",
+      "verdict": "PASS",
+      "evidence": {
+        "className": "is-map-selected",
+        "ariaSelected": "true",
+        "mapStatus": "Empresa selecionada: Estadão Bar & Lanches.",
+        "iframeSrc": "https://www.openstreetmap.org/export/embed.html?bbox=-46.657331%2C-23.562224%2C-46.627933%2C-23.535275&layer=mapnik&marker=-23.548750%2C-46.642632"
+      },
+      "observations": []
+    },
+    {
+      "name": "Mobile: sidebar vira barra superior rolável sem quebrar layout",
+      "verdict": "FAIL",
+      "evidence": {
+        "viewport": {
+          "w": 390,
+          "h": 844
+        },
+        "appDisplay": "block",
+        "sidebarPosition": "sticky",
+        "sidebarFlexDirection": "row",
+        "sidebarOverflowX": "auto",
+        "sidebarRect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 79,
+          "top": 0,
+          "right": 390,
+          "bottom": 79,
+          "left": 0
+        },
+        "tabsDisplay": "flex",
+        "tabsMinWidth": "max-content",
+        "tabsScrollWidth": 222,
+        "tabsClientWidth": 222,
+        "docClientWidth": 390,
+        "docScrollWidth": 900,
+        "hasPageHorizontalOverflow": true,
+        "tabButtons": [
+          {
+            "tab": "search",
+            "rect": {
+              "x": 62,
+              "y": 15,
+              "width": 48,
+              "height": 48,
+              "top": 15,
+              "right": 110,
+              "bottom": 63,
+              "left": 62
+            },
+            "textVisible": false
+          },
+          {
+            "tab": "history",
+            "rect": {
+              "x": 120,
+              "y": 15,
+              "width": 48,
+              "height": 48,
+              "top": 15,
+              "right": 168,
+              "bottom": 63,
+              "left": 120
+            },
+            "textVisible": false
+          },
+          {
+            "tab": "recent",
+            "rect": {
+              "x": 178,
+              "y": 15,
+              "width": 48,
+              "height": 48,
+              "top": 15,
+              "right": 226,
+              "bottom": 63,
+              "left": 178
+            },
+            "textVisible": false
+          },
+          {
+            "tab": "saved",
+            "rect": {
+              "x": 236,
+              "y": 15,
+              "width": 48,
+              "height": 48,
+              "top": 15,
+              "right": 284,
+              "bottom": 63,
+              "left": 236
+            },
+            "textVisible": false
+          }
+        ]
+      },
+      "observations": [
+        "Página tem overflow horizontal global em mobile."
+      ]
+    }
+  ],
+  "consoleMessages": [],
+  "pageErrors": [],
+  "responses": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:8000/",
+      "status": 200,
+      "body": "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Local Rush</title>\n    <link rel=\"stylesheet\" href=\"/static/assets/vendor/leaflet/leaflet.css\" />\n    <link rel=\"stylesheet\" href=\"/static/style.css?v=12\" />\n  </head>\n  <body>\n    <div class=\"app-frame\">\n      <aside class=\"sidebar\" aria-label=\"Navegação principal\">\n        <a class=\"brand\" href=\"/\" aria-label=\"Local Rush início\">\n          <span class=\"brand-mark\" aria-hidden=\"true\">\n            <span></span>\n            <span></span>\n            <span></span>\n          </span>\n          <span class=\"brand-copy\">\n            <strong>Local Rush</strong>\n            <small>Lead intelligence</small>\n          </span>\n        </a>\n\n        <nav class=\"tabs\" aria-label=\"Abas de atividade\">\n          <button class=\"tab-button is-active\" type=\"button\" data-tab=\"search\">\n            <img src=\"/static/assets/icons/search.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Nova busca</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"history\">\n            <img src=\"/static/assets/icons/history.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Histórico</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"recent\">\n            <img src=\"/static/assets/icons/recent.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas recentes</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"saved\">\n            <img src=\"/static/assets/icons/saved.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas salvas</span>\n          </button>\n        </nav>\n\n        <div class=\"sidebar-footer\">\n          <button id=\"theme-toggle\" class=\"theme-toggle\" type=\"button\" aria-label=\"Alternar tema\">\n            <span class=\"theme-toggle-icon\" aria-hidden=\"true\"></span>\n            <span id=\"theme-toggle-label\">Tema claro</span>\n          </button>\n          <p>OpenStreetMap + Overpass</p>\n        </div>\n      </aside>\n\n      <main class=\"app-shell\">\n        <header class=\"topbar\">\n          <div>\n            <p class=\"eyebrow\">Dashboard</p>\n            <h1>Prospecção local com dados abertos</h1>\n          </div>\n          <aside class=\"hero-kpi\" aria-label=\"Resumo rápido\">\n            <span>\n              <strong>Local-first</strong>\n              Sem banco\n            </span>\n            <span>\n              <strong>Mapa vivo</strong>\n              Leaflet\n            </span>\n            <span>\n              <strong>Zero API paga</strong>\n              OSM\n            </span>\n          </aside>\n        </header>\n\n        <section class=\"dashboard-grid\" aria-label=\"Painel principal\">\n          <section class=\"panel search-panel\">\n            <div class=\"panel-heading\">\n              <p class=\"eyebrow\">Filtro inteligente</p>\n              <h2>Configure a busca</h2>\n            </div>\n\n            <form id=\"search-form\" class=\"search-form\" novalidate>\n              <div class=\"form-grid\">\n                <label class=\"location-query-field\">\n                  Localização\n                  <input\n                    id=\"location-query\"\n                    type=\"text\"\n                    name=\"location_query\"\n                    placeholder=\"Centro, São Paulo ou 01310-100\"\n                  />\n                </label>\n                <p class=\"form-hint\">\n                  Use sua localização atual ou digite cidade, bairro ou CEP para\n                  posicionar o mapa.\n                </p>\n                <label>\n                  Raio\n                  <select name=\"radius_level\" required>\n                    <option value=\"small\">Pequeno</option>\n                    <option value=\"medium\" selected>Médio</option>\n                    <option value=\"high\">Alto</option>\n                    <option value=\"max\">Máximo</option>\n                  </select>\n                </label>\n                <label>\n                  Categoria\n                  <select name=\"category\" required>\n                    <option value=\"business_contact\">Micro-Empresas</option>\n                    <option value=\"restaurant\">Restaurante</option>\n                    <option value=\"barber\">Barbearia</option>\n                    <option value=\"hairdresser\">Cabeleireiro</option>\n                    <option value=\"gym\">Academia</option>\n                    <option value=\"clinic\">Clínica</option>\n                    <option value=\"dentist\">Dentista</option>\n                    <option value=\"store\">Loja geral</option>\n                    <option value=\"car_repair\">Oficina</option>\n                    <option value=\"real_estate\">Imobiliária</option>\n                    <option value=\"pharmacy\">Farmácia</option>\n                    <option value=\"bakery\">Padaria</option>\n                    <option value=\"supermarket\">Supermercado</option>\n                    <option value=\"cafe\">Café</option>\n                    <option value=\"hotel\">Hotel</option>\n                    <option value=\"school\">Escola</option>\n                  </select>\n                </label>\n                <label>\n                  Limite\n                  <input type=\"number\" name=\"limit\" min=\"1\" max=\"20\" value=\"10\" required />\n                </label>\n                <label class=\"advanced-field\">\n                  Latitude\n                  <input\n                    type=\"number\"\n                    name=\"lat\"\n                    step=\"0.000001\"\n                    value=\"-23.550520\"\n                    placeholder=\"-23.550520\"\n                    required\n                  />\n                </label>\n                <label class=\"advanced-field\">\n                  Longitude\n                  <input\n                    type=\"number\"\n                    name=\"lng\"\n                    step=\"0.000001\"\n                    value=\"-46.633308\"\n                    placeholder=\"-46.633308\"\n                    required\n                  />\n                </label>\n                <label class=\"checkbox-field\">\n                  <input type=\"checkbox\" name=\"only_with_site\" />\n                  Apenas empresas com site\n                </label>\n              </div>\n\n              <div class=\"actions-row\">\n                <button id=\"geo-button\" type=\"button\" class=\"button secondary\">\n                  Usar localização atual\n                </button>\n                <button id=\"location-query-button\" type=\"button\" class=\"button secondary\">\n                  Aplicar local\n                </button>\n                <button id=\"search-button\" type=\"submit\" class=\"button primary\">\n                  Buscar empresas\n                </button>\n              </div>\n\n              <p\n                id=\"status-message\"\n                class=\"status-message\"\n                role=\"status\"\n                aria-live=\"polite\"\n                aria-atomic=\"true\"\n              ></p>\n              <p id=\"error-message\" class=\"error-message\" role=\"alert\"></p>\n            </form>\n          </section>\n\n          <section class=\"panel map-panel\">\n            <div class=\"panel-header\">\n              <div>\n                <p class=\"eyebrow\">Mapa operacional</p>\n                <h2>Área da busca</h2>\n              </div>\n              <div class=\"map-tools\">\n                <p id=\"map-status\">Centro, raio e empresas encontradas.</p>\n                <button id=\"fit-map-button\" class=\"mini-button\" type=\"button\">\n                  Ajustar\n                </button>\n              </div>\n            </div>\n            <div class=\"map-shell\">\n              <div id=\"map\" role=\"region\" aria-label=\"Mapa de resultados da busca\"></div>\n              <iframe\n                id=\"map-preview\"\n                class=\"map-preview\"\n                title=\"Prévia do mapa da busca\"\n                loading=\"lazy\"\n                referrerpolicy=\"no-referrer-when-downgrade\"\n              ></iframe>\n            </div>\n          </section>\n        </section>\n\n        <section class=\"panel results-panel\">\n          <div class=\"panel-header\">\n            <div>\n              <p class=\"eyebrow\">Pipeline comercial</p>\n              <h2>Empresas encontradas</h2>\n            </div>\n            <p id=\"results-count\">Nenhuma busca realizada.</p>\n          </div>\n\n          <div class=\"results-wrap\">\n            <table>\n              <thead>\n                <tr>\n                  <th>Empresa</th>\n                  <th>Categoria</th>\n                  <th>Contato</th>\n                  <th>Score</th>\n                  <th>Mapa</th>\n                  <th>Ações</th>\n                </tr>\n              </thead>\n              <tbody id=\"results-body\">\n                <tr>\n                  <td colspan=\"6\" class=\"empty-state\">Faça uma busca para listar empresas.</td>\n                </tr>\n              </tbody>\n            </table>\n          </div>\n        </section>\n\n        <section class=\"panel activity-panel\" id=\"activity-panel\">\n          <div class=\"panel-heading\">\n            <p class=\"eyebrow\">Atividade local</p>\n            <h2>Histórico e listas</h2>\n          </div>\n          <div class=\"activity-grid\">\n            <article class=\"activity-card is-active\" data-list=\"search\">\n              <h3>Nova busca</h3>\n              <p class=\"search-help-text\">\n                Se a localização automática falhar, use um ponto de partida rápido:\n              </p>\n              <div class=\"quick-location-grid\">\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"São Paulo (Centro)\"\n                  data-lat=\"-23.550520\"\n                  data-lng=\"-46.633308\"\n                >\n                  São Paulo\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Rio de Janeiro (Centro)\"\n                  data-lat=\"-22.906847\"\n                  data-lng=\"-43.172897\"\n                >\n                  Rio de Janeiro\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Brasília (Centro)\"\n                  data-lat=\"-15.793889\"\n                  data-lng=\"-47.882778\"\n                >\n                  Brasília\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Belo Horizonte (Centro)\"\n                  data-lat=\"-19.916681\"\n                  data-lng=\"-43.934493\"\n                >\n                  Belo Horizonte\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"retry-geolocation\"\n                >\n                  Tentar localização automática\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"clear-local-data\"\n                >\n                  Limpar dados locais\n                </button>\n              </div>\n            </article>\n            <article class=\"activity-card\" data-list=\"history\">\n              <h3>Histórico</h3>\n              <ul id=\"history-list\">\n                <li>Nenhuma busca registrada.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"recent\">\n              <h3>Empresas recentes</h3>\n              <ul id=\"recent-list\">\n                <li>Nenhuma empresa recente.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"saved\">\n              <h3>Empresas salvas</h3>\n              <ul id=\"saved-list\">\n                <li>Nenhuma empresa salva.</li>\n              </ul>\n            </article>\n          </div>\n        </section>\n\n        <footer class=\"footer-note\">\n          Dados © OpenStreetMap contributors, licença ODbL.\n        </footer>\n      </main>\n    </div>\n\n    <script src=\"/static/assets/vendor/leaflet/leaflet.js\" defer></script>\n    <script src=\"/static/script.js?v=12\" defer></script>\n  </body>\n</html>\n"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:8000/",
+      "status": 200,
+      "body": "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Local Rush</title>\n    <link rel=\"stylesheet\" href=\"/static/assets/vendor/leaflet/leaflet.css\" />\n    <link rel=\"stylesheet\" href=\"/static/style.css?v=12\" />\n  </head>\n  <body>\n    <div class=\"app-frame\">\n      <aside class=\"sidebar\" aria-label=\"Navegação principal\">\n        <a class=\"brand\" href=\"/\" aria-label=\"Local Rush início\">\n          <span class=\"brand-mark\" aria-hidden=\"true\">\n            <span></span>\n            <span></span>\n            <span></span>\n          </span>\n          <span class=\"brand-copy\">\n            <strong>Local Rush</strong>\n            <small>Lead intelligence</small>\n          </span>\n        </a>\n\n        <nav class=\"tabs\" aria-label=\"Abas de atividade\">\n          <button class=\"tab-button is-active\" type=\"button\" data-tab=\"search\">\n            <img src=\"/static/assets/icons/search.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Nova busca</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"history\">\n            <img src=\"/static/assets/icons/history.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Histórico</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"recent\">\n            <img src=\"/static/assets/icons/recent.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas recentes</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"saved\">\n            <img src=\"/static/assets/icons/saved.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas salvas</span>\n          </button>\n        </nav>\n\n        <div class=\"sidebar-footer\">\n          <button id=\"theme-toggle\" class=\"theme-toggle\" type=\"button\" aria-label=\"Alternar tema\">\n            <span class=\"theme-toggle-icon\" aria-hidden=\"true\"></span>\n            <span id=\"theme-toggle-label\">Tema claro</span>\n          </button>\n          <p>OpenStreetMap + Overpass</p>\n        </div>\n      </aside>\n\n      <main class=\"app-shell\">\n        <header class=\"topbar\">\n          <div>\n            <p class=\"eyebrow\">Dashboard</p>\n            <h1>Prospecção local com dados abertos</h1>\n          </div>\n          <aside class=\"hero-kpi\" aria-label=\"Resumo rápido\">\n            <span>\n              <strong>Local-first</strong>\n              Sem banco\n            </span>\n            <span>\n              <strong>Mapa vivo</strong>\n              Leaflet\n            </span>\n            <span>\n              <strong>Zero API paga</strong>\n              OSM\n            </span>\n          </aside>\n        </header>\n\n        <section class=\"dashboard-grid\" aria-label=\"Painel principal\">\n          <section class=\"panel search-panel\">\n            <div class=\"panel-heading\">\n              <p class=\"eyebrow\">Filtro inteligente</p>\n              <h2>Configure a busca</h2>\n            </div>\n\n            <form id=\"search-form\" class=\"search-form\" novalidate>\n              <div class=\"form-grid\">\n                <label class=\"location-query-field\">\n                  Localização\n                  <input\n                    id=\"location-query\"\n                    type=\"text\"\n                    name=\"location_query\"\n                    placeholder=\"Centro, São Paulo ou 01310-100\"\n                  />\n                </label>\n                <p class=\"form-hint\">\n                  Use sua localização atual ou digite cidade, bairro ou CEP para\n                  posicionar o mapa.\n                </p>\n                <label>\n                  Raio\n                  <select name=\"radius_level\" required>\n                    <option value=\"small\">Pequeno</option>\n                    <option value=\"medium\" selected>Médio</option>\n                    <option value=\"high\">Alto</option>\n                    <option value=\"max\">Máximo</option>\n                  </select>\n                </label>\n                <label>\n                  Categoria\n                  <select name=\"category\" required>\n                    <option value=\"business_contact\">Micro-Empresas</option>\n                    <option value=\"restaurant\">Restaurante</option>\n                    <option value=\"barber\">Barbearia</option>\n                    <option value=\"hairdresser\">Cabeleireiro</option>\n                    <option value=\"gym\">Academia</option>\n                    <option value=\"clinic\">Clínica</option>\n                    <option value=\"dentist\">Dentista</option>\n                    <option value=\"store\">Loja geral</option>\n                    <option value=\"car_repair\">Oficina</option>\n                    <option value=\"real_estate\">Imobiliária</option>\n                    <option value=\"pharmacy\">Farmácia</option>\n                    <option value=\"bakery\">Padaria</option>\n                    <option value=\"supermarket\">Supermercado</option>\n                    <option value=\"cafe\">Café</option>\n                    <option value=\"hotel\">Hotel</option>\n                    <option value=\"school\">Escola</option>\n                  </select>\n                </label>\n                <label>\n                  Limite\n                  <input type=\"number\" name=\"limit\" min=\"1\" max=\"20\" value=\"10\" required />\n                </label>\n                <label class=\"advanced-field\">\n                  Latitude\n                  <input\n                    type=\"number\"\n                    name=\"lat\"\n                    step=\"0.000001\"\n                    value=\"-23.550520\"\n                    placeholder=\"-23.550520\"\n                    required\n                  />\n                </label>\n                <label class=\"advanced-field\">\n                  Longitude\n                  <input\n                    type=\"number\"\n                    name=\"lng\"\n                    step=\"0.000001\"\n                    value=\"-46.633308\"\n                    placeholder=\"-46.633308\"\n                    required\n                  />\n                </label>\n                <label class=\"checkbox-field\">\n                  <input type=\"checkbox\" name=\"only_with_site\" />\n                  Apenas empresas com site\n                </label>\n              </div>\n\n              <div class=\"actions-row\">\n                <button id=\"geo-button\" type=\"button\" class=\"button secondary\">\n                  Usar localização atual\n                </button>\n                <button id=\"location-query-button\" type=\"button\" class=\"button secondary\">\n                  Aplicar local\n                </button>\n                <button id=\"search-button\" type=\"submit\" class=\"button primary\">\n                  Buscar empresas\n                </button>\n              </div>\n\n              <p\n                id=\"status-message\"\n                class=\"status-message\"\n                role=\"status\"\n                aria-live=\"polite\"\n                aria-atomic=\"true\"\n              ></p>\n              <p id=\"error-message\" class=\"error-message\" role=\"alert\"></p>\n            </form>\n          </section>\n\n          <section class=\"panel map-panel\">\n            <div class=\"panel-header\">\n              <div>\n                <p class=\"eyebrow\">Mapa operacional</p>\n                <h2>Área da busca</h2>\n              </div>\n              <div class=\"map-tools\">\n                <p id=\"map-status\">Centro, raio e empresas encontradas.</p>\n                <button id=\"fit-map-button\" class=\"mini-button\" type=\"button\">\n                  Ajustar\n                </button>\n              </div>\n            </div>\n            <div class=\"map-shell\">\n              <div id=\"map\" role=\"region\" aria-label=\"Mapa de resultados da busca\"></div>\n              <iframe\n                id=\"map-preview\"\n                class=\"map-preview\"\n                title=\"Prévia do mapa da busca\"\n                loading=\"lazy\"\n                referrerpolicy=\"no-referrer-when-downgrade\"\n              ></iframe>\n            </div>\n          </section>\n        </section>\n\n        <section class=\"panel results-panel\">\n          <div class=\"panel-header\">\n            <div>\n              <p class=\"eyebrow\">Pipeline comercial</p>\n              <h2>Empresas encontradas</h2>\n            </div>\n            <p id=\"results-count\">Nenhuma busca realizada.</p>\n          </div>\n\n          <div class=\"results-wrap\">\n            <table>\n              <thead>\n                <tr>\n                  <th>Empresa</th>\n                  <th>Categoria</th>\n                  <th>Contato</th>\n                  <th>Score</th>\n                  <th>Mapa</th>\n                  <th>Ações</th>\n                </tr>\n              </thead>\n              <tbody id=\"results-body\">\n                <tr>\n                  <td colspan=\"6\" class=\"empty-state\">Faça uma busca para listar empresas.</td>\n                </tr>\n              </tbody>\n            </table>\n          </div>\n        </section>\n\n        <section class=\"panel activity-panel\" id=\"activity-panel\">\n          <div class=\"panel-heading\">\n            <p class=\"eyebrow\">Atividade local</p>\n            <h2>Histórico e listas</h2>\n          </div>\n          <div class=\"activity-grid\">\n            <article class=\"activity-card is-active\" data-list=\"search\">\n              <h3>Nova busca</h3>\n              <p class=\"search-help-text\">\n                Se a localização automática falhar, use um ponto de partida rápido:\n              </p>\n              <div class=\"quick-location-grid\">\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"São Paulo (Centro)\"\n                  data-lat=\"-23.550520\"\n                  data-lng=\"-46.633308\"\n                >\n                  São Paulo\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Rio de Janeiro (Centro)\"\n                  data-lat=\"-22.906847\"\n                  data-lng=\"-43.172897\"\n                >\n                  Rio de Janeiro\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Brasília (Centro)\"\n                  data-lat=\"-15.793889\"\n                  data-lng=\"-47.882778\"\n                >\n                  Brasília\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Belo Horizonte (Centro)\"\n                  data-lat=\"-19.916681\"\n                  data-lng=\"-43.934493\"\n                >\n                  Belo Horizonte\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"retry-geolocation\"\n                >\n                  Tentar localização automática\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"clear-local-data\"\n                >\n                  Limpar dados locais\n                </button>\n              </div>\n            </article>\n            <article class=\"activity-card\" data-list=\"history\">\n              <h3>Histórico</h3>\n              <ul id=\"history-list\">\n                <li>Nenhuma busca registrada.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"recent\">\n              <h3>Empresas recentes</h3>\n              <ul id=\"recent-list\">\n                <li>Nenhuma empresa recente.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"saved\">\n              <h3>Empresas salvas</h3>\n              <ul id=\"saved-list\">\n                <li>Nenhuma empresa salva.</li>\n              </ul>\n            </article>\n          </div>\n        </section>\n\n        <footer class=\"footer-note\">\n          Dados © OpenStreetMap contributors, licença ODbL.\n        </footer>\n      </main>\n    </div>\n\n    <script src=\"/static/assets/vendor/leaflet/leaflet.js\" defer></script>\n    <script src=\"/static/script.js?v=12\" defer></script>\n  </body>\n</html>\n"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:8000/",
+      "status": 200,
+      "body": "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Local Rush</title>\n    <link rel=\"stylesheet\" href=\"/static/assets/vendor/leaflet/leaflet.css\" />\n    <link rel=\"stylesheet\" href=\"/static/style.css?v=12\" />\n  </head>\n  <body>\n    <div class=\"app-frame\">\n      <aside class=\"sidebar\" aria-label=\"Navegação principal\">\n        <a class=\"brand\" href=\"/\" aria-label=\"Local Rush início\">\n          <span class=\"brand-mark\" aria-hidden=\"true\">\n            <span></span>\n            <span></span>\n            <span></span>\n          </span>\n          <span class=\"brand-copy\">\n            <strong>Local Rush</strong>\n            <small>Lead intelligence</small>\n          </span>\n        </a>\n\n        <nav class=\"tabs\" aria-label=\"Abas de atividade\">\n          <button class=\"tab-button is-active\" type=\"button\" data-tab=\"search\">\n            <img src=\"/static/assets/icons/search.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Nova busca</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"history\">\n            <img src=\"/static/assets/icons/history.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Histórico</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"recent\">\n            <img src=\"/static/assets/icons/recent.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas recentes</span>\n          </button>\n          <button class=\"tab-button\" type=\"button\" data-tab=\"saved\">\n            <img src=\"/static/assets/icons/saved.svg\" alt=\"\" aria-hidden=\"true\" />\n            <span>Empresas salvas</span>\n          </button>\n        </nav>\n\n        <div class=\"sidebar-footer\">\n          <button id=\"theme-toggle\" class=\"theme-toggle\" type=\"button\" aria-label=\"Alternar tema\">\n            <span class=\"theme-toggle-icon\" aria-hidden=\"true\"></span>\n            <span id=\"theme-toggle-label\">Tema claro</span>\n          </button>\n          <p>OpenStreetMap + Overpass</p>\n        </div>\n      </aside>\n\n      <main class=\"app-shell\">\n        <header class=\"topbar\">\n          <div>\n            <p class=\"eyebrow\">Dashboard</p>\n            <h1>Prospecção local com dados abertos</h1>\n          </div>\n          <aside class=\"hero-kpi\" aria-label=\"Resumo rápido\">\n            <span>\n              <strong>Local-first</strong>\n              Sem banco\n            </span>\n            <span>\n              <strong>Mapa vivo</strong>\n              Leaflet\n            </span>\n            <span>\n              <strong>Zero API paga</strong>\n              OSM\n            </span>\n          </aside>\n        </header>\n\n        <section class=\"dashboard-grid\" aria-label=\"Painel principal\">\n          <section class=\"panel search-panel\">\n            <div class=\"panel-heading\">\n              <p class=\"eyebrow\">Filtro inteligente</p>\n              <h2>Configure a busca</h2>\n            </div>\n\n            <form id=\"search-form\" class=\"search-form\" novalidate>\n              <div class=\"form-grid\">\n                <label class=\"location-query-field\">\n                  Localização\n                  <input\n                    id=\"location-query\"\n                    type=\"text\"\n                    name=\"location_query\"\n                    placeholder=\"Centro, São Paulo ou 01310-100\"\n                  />\n                </label>\n                <p class=\"form-hint\">\n                  Use sua localização atual ou digite cidade, bairro ou CEP para\n                  posicionar o mapa.\n                </p>\n                <label>\n                  Raio\n                  <select name=\"radius_level\" required>\n                    <option value=\"small\">Pequeno</option>\n                    <option value=\"medium\" selected>Médio</option>\n                    <option value=\"high\">Alto</option>\n                    <option value=\"max\">Máximo</option>\n                  </select>\n                </label>\n                <label>\n                  Categoria\n                  <select name=\"category\" required>\n                    <option value=\"business_contact\">Micro-Empresas</option>\n                    <option value=\"restaurant\">Restaurante</option>\n                    <option value=\"barber\">Barbearia</option>\n                    <option value=\"hairdresser\">Cabeleireiro</option>\n                    <option value=\"gym\">Academia</option>\n                    <option value=\"clinic\">Clínica</option>\n                    <option value=\"dentist\">Dentista</option>\n                    <option value=\"store\">Loja geral</option>\n                    <option value=\"car_repair\">Oficina</option>\n                    <option value=\"real_estate\">Imobiliária</option>\n                    <option value=\"pharmacy\">Farmácia</option>\n                    <option value=\"bakery\">Padaria</option>\n                    <option value=\"supermarket\">Supermercado</option>\n                    <option value=\"cafe\">Café</option>\n                    <option value=\"hotel\">Hotel</option>\n                    <option value=\"school\">Escola</option>\n                  </select>\n                </label>\n                <label>\n                  Limite\n                  <input type=\"number\" name=\"limit\" min=\"1\" max=\"20\" value=\"10\" required />\n                </label>\n                <label class=\"advanced-field\">\n                  Latitude\n                  <input\n                    type=\"number\"\n                    name=\"lat\"\n                    step=\"0.000001\"\n                    value=\"-23.550520\"\n                    placeholder=\"-23.550520\"\n                    required\n                  />\n                </label>\n                <label class=\"advanced-field\">\n                  Longitude\n                  <input\n                    type=\"number\"\n                    name=\"lng\"\n                    step=\"0.000001\"\n                    value=\"-46.633308\"\n                    placeholder=\"-46.633308\"\n                    required\n                  />\n                </label>\n                <label class=\"checkbox-field\">\n                  <input type=\"checkbox\" name=\"only_with_site\" />\n                  Apenas empresas com site\n                </label>\n              </div>\n\n              <div class=\"actions-row\">\n                <button id=\"geo-button\" type=\"button\" class=\"button secondary\">\n                  Usar localização atual\n                </button>\n                <button id=\"location-query-button\" type=\"button\" class=\"button secondary\">\n                  Aplicar local\n                </button>\n                <button id=\"search-button\" type=\"submit\" class=\"button primary\">\n                  Buscar empresas\n                </button>\n              </div>\n\n              <p\n                id=\"status-message\"\n                class=\"status-message\"\n                role=\"status\"\n                aria-live=\"polite\"\n                aria-atomic=\"true\"\n              ></p>\n              <p id=\"error-message\" class=\"error-message\" role=\"alert\"></p>\n            </form>\n          </section>\n\n          <section class=\"panel map-panel\">\n            <div class=\"panel-header\">\n              <div>\n                <p class=\"eyebrow\">Mapa operacional</p>\n                <h2>Área da busca</h2>\n              </div>\n              <div class=\"map-tools\">\n                <p id=\"map-status\">Centro, raio e empresas encontradas.</p>\n                <button id=\"fit-map-button\" class=\"mini-button\" type=\"button\">\n                  Ajustar\n                </button>\n              </div>\n            </div>\n            <div class=\"map-shell\">\n              <div id=\"map\" role=\"region\" aria-label=\"Mapa de resultados da busca\"></div>\n              <iframe\n                id=\"map-preview\"\n                class=\"map-preview\"\n                title=\"Prévia do mapa da busca\"\n                loading=\"lazy\"\n                referrerpolicy=\"no-referrer-when-downgrade\"\n              ></iframe>\n            </div>\n          </section>\n        </section>\n\n        <section class=\"panel results-panel\">\n          <div class=\"panel-header\">\n            <div>\n              <p class=\"eyebrow\">Pipeline comercial</p>\n              <h2>Empresas encontradas</h2>\n            </div>\n            <p id=\"results-count\">Nenhuma busca realizada.</p>\n          </div>\n\n          <div class=\"results-wrap\">\n            <table>\n              <thead>\n                <tr>\n                  <th>Empresa</th>\n                  <th>Categoria</th>\n                  <th>Contato</th>\n                  <th>Score</th>\n                  <th>Mapa</th>\n                  <th>Ações</th>\n                </tr>\n              </thead>\n              <tbody id=\"results-body\">\n                <tr>\n                  <td colspan=\"6\" class=\"empty-state\">Faça uma busca para listar empresas.</td>\n                </tr>\n              </tbody>\n            </table>\n          </div>\n        </section>\n\n        <section class=\"panel activity-panel\" id=\"activity-panel\">\n          <div class=\"panel-heading\">\n            <p class=\"eyebrow\">Atividade local</p>\n            <h2>Histórico e listas</h2>\n          </div>\n          <div class=\"activity-grid\">\n            <article class=\"activity-card is-active\" data-list=\"search\">\n              <h3>Nova busca</h3>\n              <p class=\"search-help-text\">\n                Se a localização automática falhar, use um ponto de partida rápido:\n              </p>\n              <div class=\"quick-location-grid\">\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"São Paulo (Centro)\"\n                  data-lat=\"-23.550520\"\n                  data-lng=\"-46.633308\"\n                >\n                  São Paulo\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Rio de Janeiro (Centro)\"\n                  data-lat=\"-22.906847\"\n                  data-lng=\"-43.172897\"\n                >\n                  Rio de Janeiro\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Brasília (Centro)\"\n                  data-lat=\"-15.793889\"\n                  data-lng=\"-47.882778\"\n                >\n                  Brasília\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"quick-location\"\n                  data-label=\"Belo Horizonte (Centro)\"\n                  data-lat=\"-19.916681\"\n                  data-lng=\"-43.934493\"\n                >\n                  Belo Horizonte\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"retry-geolocation\"\n                >\n                  Tentar localização automática\n                </button>\n                <button\n                  class=\"mini-button quick-location-button\"\n                  type=\"button\"\n                  data-action=\"clear-local-data\"\n                >\n                  Limpar dados locais\n                </button>\n              </div>\n            </article>\n            <article class=\"activity-card\" data-list=\"history\">\n              <h3>Histórico</h3>\n              <ul id=\"history-list\">\n                <li>Nenhuma busca registrada.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"recent\">\n              <h3>Empresas recentes</h3>\n              <ul id=\"recent-list\">\n                <li>Nenhuma empresa recente.</li>\n              </ul>\n            </article>\n            <article class=\"activity-card\" data-list=\"saved\">\n              <h3>Empresas salvas</h3>\n              <ul id=\"saved-list\">\n                <li>Nenhuma empresa salva.</li>\n              </ul>\n            </article>\n          </div>\n        </section>\n\n        <footer class=\"footer-note\">\n          Dados © OpenStreetMap contributors, licença ODbL.\n        </footer>\n      </main>\n    </div>\n\n    <script src=\"/static/assets/vendor/leaflet/leaflet.js\" defer></script>\n    <script src=\"/static/script.js?v=12\" defer></script>\n  </body>\n</html>\n"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:8000/api/search",
+      "status": 200,
+      "body": "{\"total\":5,\"results\":[{\"name\":\"Estadão Bar & Lanches\",\"category\":\"restaurant\",\"address\":\"Viaduto Nove de Julho 193 - Centro, São Paulo\",\"phone\":\"+55 11 3257-7121;+55 11 3256-3700\",\"whatsapp\":\"\",\"email\":\"comercial@estadaolanches.com.br\",\"website\":\"http://www.estadaolanches.com.br/\",\"maps_link\":\"https://www.openstreetmap.org/?mlat=-23.548750&mlon=-46.642632&zoom=18\",\"lat\":-23.5487497,\"lng\":-46.6426322,\"opening_hours\":\"24/7\",\"opportunity_score\":\"Alta\"},{\"name\":\"Apfel\",\"category\":\"restaurant\",\"address\":\"Rua Dom José de Barros 99 - São Paulo\",\"phone\":\"+55 11 3256 7909\",\"whatsapp\":\"\",\"email\":\"\",\"website\":\"https://www.apfel.com.br/\",\"maps_link\":\"https://www.openstreetmap.org/?mlat=-23.544622&mlon=-46.641057&zoom=18\",\"lat\":-23.5446224,\"lng\":-46.641057,\"opening_hours\":\"Mo-Sa 11:00-15:00\",\"opportunity_score\":\"Média\"},{\"name\":\"Feijão de Corda\",\"category\":\"restaurant\",\"address\":\"Rua Jaceguai 428 - Bixiga, São Paulo\",\"phone\":\"+55 11 3105-8463\",\"whatsapp\":\"\",\"email\":\"\",\"website\":\"https://www.facebook.com/feijaodecordacentro/\",\"maps_link\":\"https://www.openstreetmap.org/?mlat=-23.555288&mlon=-46.640324&zoom=18\",\"lat\":-23.5552879,\"lng\":-46.6403238,\"opening_hours\":\"Mo-Su 11:00-23:00\",\"opportunity_score\":\"Média\"},{\"name\":\"Lamen Kazu\",\"category\":\"restaurant\",\"address\":\"Rua Tomás Gonzaga 51 - Liberdade, São Paulo\",\"phone\":\"+55 11 3277-4286\",\"whatsapp\":\"\",\"email\":\"\",\"website\":\"https://lamenkazu.com.br/\",\"maps_link\":\"https://www.openstreetmap.org/?mlat=-23.557680&mlon=-46.635899&zoom=18\",\"lat\":-23.55768,\"lng\":-46.635899,\"opening_hours\":\"Mo-Sa 11:00-15:00,18:00-22:30; Su,PH 11:00-15:00,18:00-21:00\",\"opportunity_score\":\"Média\"},{\"name\":\"Paribar\",\"category\":\"restaurant\",\"address\":\"praça dom josé gaspar 42 - São Paulo\",\"phone\":\"+55 11 3159-0219\",\"whatsapp\":\"\",\"email\":\"\",\"website\":\"https://www.paribar.com.br/\",\"maps_link\":\"https://www.openstreetmap.org/?mlat=-23.546468&mlon=-46.641843&zoom=18\",\"lat\":-23.5464681,\"lng\":-46.6418431,\"opening_hours\":\"\",\"opportunity_score\":\"Média\"}],\"attribution\":\"Dados © OpenStreetMap contributors, licença ODbL\"}"
+    }
+  ],
+  "screenshots": {
+    "desktopLoad": "C:\\Users\\Micro\\Desktop\\CodexSkillPack\\local-rush\\qa-output\\playwright-runner\\qa-output\\01-load-desktop.png",
+    "themeLight": "C:\\Users\\Micro\\Desktop\\CodexSkillPack\\local-rush\\qa-output\\playwright-runner\\qa-output\\02-theme-light.png",
+    "searchResults": "C:\\Users\\Micro\\Desktop\\CodexSkillPack\\local-rush\\qa-output\\playwright-runner\\qa-output\\03-search-results.png",
+    "mobile": "C:\\Users\\Micro\\Desktop\\CodexSkillPack\\local-rush\\qa-output\\playwright-runner\\qa-output\\04-mobile.png"
+  },
+  "finishedAt": "2026-06-04T17:49:50.670Z"
+}

@@ -13,6 +13,8 @@ const mapContainer = document.getElementById("map");
 const mapPreview = document.getElementById("map-preview");
 const mapStatus = document.getElementById("map-status");
 const fitMapButton = document.getElementById("fit-map-button");
+const themeToggle = document.getElementById("theme-toggle");
+const themeToggleLabel = document.getElementById("theme-toggle-label");
 
 const historyList = document.getElementById("history-list");
 const recentList = document.getElementById("recent-list");
@@ -26,6 +28,7 @@ const STORAGE_KEYS = {
   recent: "localrush_recent",
   saved: "localrush_saved",
   lastGeo: "localrush_last_geo",
+  theme: "localrush_theme",
 };
 
 const STORAGE_LIMITS = {
@@ -71,6 +74,60 @@ let mapInitRetries = 0;
 let currentMapBounds = null;
 
 const MAX_MAP_INIT_RETRIES = 12;
+
+function getStoredTheme() {
+  try {
+    const storedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+    return storedTheme === "light" || storedTheme === "dark" ? storedTheme : "";
+  } catch {
+    return "";
+  }
+}
+
+function getPreferredTheme() {
+  const storedTheme = getStoredTheme();
+  if (storedTheme) {
+    return storedTheme;
+  }
+
+  if (window.matchMedia?.("(prefers-color-scheme: light)").matches) {
+    return "light";
+  }
+
+  return "dark";
+}
+
+function applyTheme(theme, persist = false) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.body.dataset.theme = nextTheme;
+
+  if (themeToggleLabel) {
+    themeToggleLabel.textContent = nextTheme === "light" ? "Tema escuro" : "Tema claro";
+  }
+
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", String(nextTheme === "light"));
+  }
+
+  if (persist) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.theme, nextTheme);
+    } catch (error) {
+      console.warn("[local-rush] Falha ao gravar tema:", error);
+    }
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.body.dataset.theme === "light" ? "light" : "dark";
+  applyTheme(currentTheme === "light" ? "dark" : "light", true);
+
+  if (searchMap) {
+    setTimeout(() => {
+      searchMap.invalidateSize();
+    }, 80);
+  }
+}
 
 function readList(key) {
   try {
@@ -1587,6 +1644,10 @@ if (fitMapButton) {
   fitMapButton.addEventListener("click", fitMapToCurrentResults);
 }
 
+if (themeToggle) {
+  themeToggle.addEventListener("click", toggleTheme);
+}
+
 const radiusLevelField = form.elements.namedItem("radius_level");
 if (radiusLevelField instanceof HTMLSelectElement) {
   radiusLevelField.addEventListener("change", () => {
@@ -1626,6 +1687,7 @@ for (const button of tabButtons) {
   });
 }
 
+applyTheme(getPreferredTheme());
 activateTab("search");
 refreshActivityLists();
 initMap();
