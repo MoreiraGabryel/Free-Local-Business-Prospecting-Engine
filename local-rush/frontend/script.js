@@ -31,6 +31,12 @@ const savedList = document.getElementById("saved-list");
 
 const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
 const viewPanels = Array.from(document.querySelectorAll(".view-panel"));
+const tabButtonsByView = new Map(
+  tabButtons.map((button) => [normalizeViewName(button.dataset.tab), button]),
+);
+const viewPanelsByName = new Map(
+  viewPanels.map((panel) => [panel.dataset.view || "", panel]),
+);
 
 const STORAGE_KEYS = {
   history: "localrush_history",
@@ -81,6 +87,9 @@ let searchMap = null;
 let mapLayerGroup = null;
 let currentMapBounds = null;
 let leafletLoadPromise = null;
+let activeViewName = "";
+let pendingMapResize = 0;
+let lastHeaderViewName = "";
 
 const LEAFLET_SCRIPT_SRC = "/static/assets/vendor/leaflet/leaflet.js";
 
@@ -178,9 +187,7 @@ function toggleTheme() {
   applyTheme(currentTheme === "light" ? "dark" : "light", true);
 
   if (searchMap) {
-    setTimeout(() => {
-      searchMap.invalidateSize();
-    }, 80);
+    scheduleMapResize();
   }
 }
 
@@ -213,6 +220,10 @@ function loadLeaflet() {
 }
 
 function updateViewHeader(viewName) {
+  if (lastHeaderViewName === viewName) {
+    return;
+  }
+
   const meta = VIEW_META[viewName] || VIEW_META.dashboard;
   const metrics = meta.metrics || VIEW_META.dashboard.metrics;
 
@@ -241,10 +252,52 @@ function updateViewHeader(viewName) {
       detailNode.textContent = detail;
     }
   });
+  lastHeaderViewName = viewName;
 }
 
 function normalizeViewName(tabName) {
   return tabName === "search" ? "dashboard" : tabName || "dashboard";
+}
+
+function setActiveButton(viewName) {
+  const previousButton = tabButtonsByView.get(activeViewName);
+  if (previousButton) {
+    previousButton.classList.remove("is-active");
+    previousButton.setAttribute("aria-current", "false");
+  }
+
+  const nextButton = tabButtonsByView.get(viewName);
+  if (nextButton) {
+    nextButton.classList.add("is-active");
+    nextButton.setAttribute("aria-current", "page");
+  }
+}
+
+function setActivePanel(viewName) {
+  const previousPanel = viewPanelsByName.get(activeViewName);
+  if (previousPanel) {
+    previousPanel.classList.remove("is-active");
+    previousPanel.hidden = true;
+  }
+
+  const nextPanel = viewPanelsByName.get(viewName);
+  if (nextPanel) {
+    nextPanel.hidden = false;
+    nextPanel.classList.add("is-active");
+  }
+}
+
+function scheduleMapResize() {
+  if (!searchMap || pendingMapResize) {
+    return;
+  }
+
+  pendingMapResize = window.requestAnimationFrame(() => {
+    pendingMapResize = 0;
+    if (searchMap) {
+      searchMap.invalidateSize(false);
+    }
+  });
 }
 
 function readList(key) {
@@ -833,28 +886,21 @@ function clearLocalData() {
 function activateTab(tabName) {
   const viewName = normalizeViewName(tabName);
 
-  for (const button of tabButtons) {
-    const buttonView = normalizeViewName(button.dataset.tab);
-    const isActive = buttonView === viewName;
-    button.classList.toggle("is-active", isActive);
-    button.setAttribute("aria-current", isActive ? "page" : "false");
+  if (activeViewName === viewName) {
+    if (viewName === "dashboard") {
+      scheduleMapResize();
+    }
+    return;
   }
 
-  for (const panel of viewPanels) {
-    const isActive = panel.dataset.view === viewName;
-    panel.classList.toggle("is-active", isActive);
-    panel.hidden = !isActive;
-  }
-
+  setActiveButton(viewName);
+  setActivePanel(viewName);
   updateViewHeader(viewName);
+  activeViewName = viewName;
 
   if (viewName === "dashboard") {
     initMap();
-    setTimeout(() => {
-      if (searchMap) {
-        searchMap.invalidateSize();
-      }
-    }, 120);
+    scheduleMapResize();
   }
 }
 
@@ -1195,11 +1241,7 @@ function updateSearchMap(searchPayload, results = []) {
     setMapStatus("Centro e raio da busca no mapa.");
   }
 
-  setTimeout(() => {
-    if (searchMap) {
-      searchMap.invalidateSize();
-    }
-  }, 80);
+  scheduleMapResize();
 }
 
 function updateMapFromFormSelection() {
@@ -1790,7 +1832,5 @@ refreshActivityLists();
 
 window.addEventListener("resize", () => {
   ensureMapShellHeight();
-  if (searchMap) {
-    searchMap.invalidateSize();
-  }
+  scheduleMapResize();
 });
