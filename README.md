@@ -1,405 +1,206 @@
 # Local Rush
 
-<img src="./banner.png" width="100%" alt="Local Rush Banner">
+![Local Rush Banner](./banner.png)
 
-<p align="center">
-  <strong>Local business prospecting using OpenStreetMap + Overpass API.</strong>
-</p>
+Local Rush é um MVP local-first para prospecção comercial usando dados públicos do OpenStreetMap por meio da Overpass API. A aplicação permite buscar empresas próximas por categoria, visualizar resultados em mapa, salvar empresas no navegador e consultar histórico local sem banco de dados, autenticação ou APIs pagas.
 
-<p align="center">
-  MVP local-first para geração de leads comerciais sem APIs pagas.
-</p>
+## Principais Recursos
 
----
+- Busca de empresas por latitude/longitude, cidade, bairro ou CEP.
+- Consulta a dados do OpenStreetMap via Overpass API.
+- Geocoding com Nominatim para transformar local informado em coordenadas.
+- Filtros por categoria, raio, limite e presença de website.
+- Mapa com Leaflet local e fallback por iframe do OpenStreetMap.
+- Histórico, empresas recentes e empresas salvas em `localStorage`.
+- Backend FastAPI com validação de payload via Pydantic.
+- Frontend em HTML, CSS e JavaScript puro.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
-![Status](https://img.shields.io/badge/status-MVP-orange)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+## Stack
 
----
-
-# Sobre o Projeto
-
-Local Rush é um MVP de prospecção comercial local que busca empresas próximas usando dados gratuitos do OpenStreetMap através da Overpass API.
-
-O projeto foi construído com foco em:
-
-- simplicidade;
-- baixo custo operacional;
-- execução local;
-- velocidade de desenvolvimento;
-- validação rápida de ideias.
-
-Não utiliza:
-- banco de dados;
-- autenticação;
-- Docker;
-- APIs pagas;
-- frameworks frontend.
-
-Tudo roda localmente usando FastAPI + HTML/CSS/JavaScript puro.
-
----
-
-# Preview
-
-## Dashboard
-
-![Dashboard](./screenshots/dashboard.png)
-
-## Resultados
-
-![Resultados](./screenshots/results.png)
-
----
-
-# Features
-
-- Busca de empresas próximas
-- Integração com OpenStreetMap
-- Integração com Overpass API
-- Score automático de oportunidade
-- Filtro "apenas empresas com website"
-- Geolocalização automática
-- Links rápidos para:
-  - website
-  - WhatsApp
-  - email
-  - Google Maps
-- Interface dark mode responsiva
-- Sem dependência de APIs pagas
-- Execução 100% local
-
----
-
-# Stack
-
-## Backend
-- Python
+- Python 3.11+
 - FastAPI
+- Uvicorn
 - httpx
 - python-dotenv
+- HTML, CSS e JavaScript puro
+- Leaflet
+- OpenStreetMap, Overpass API e Nominatim
 
-## Frontend
-- HTML
-- CSS
-- JavaScript puro
+## Estrutura
 
-## Dados
-- OpenStreetMap
-- Overpass API
-
----
-
-# Arquitetura
-
-```txt
-Frontend (HTML/CSS/JS)
-            ↓
-        FastAPI
-            ↓
-      Overpass API
-            ↓
-     OpenStreetMap
-```
-
----
-
-# Estrutura do Projeto
-
-```txt
-local-rush/
-├── backend/
-│   ├── app.py
-│   └── services/
-│       ├── overpass.py
-│       └── site_analyzer.py
-│
-├── frontend/
-│   ├── index.html
-│   ├── style.css
-│   └── script.js
-│
-├── screenshots/
-│   ├── dashboard.png
-│   ├── results.png
-│   └── banner.png
-│
-├── .env.example
-├── .gitignore
-├── requirements.txt
+```text
+CodexSkillPack/
+├── banner.png
 ├── README.md
-└── AGENTS.md
+└── local-rush/
+    ├── backend/
+    │   ├── app.py
+    │   └── services/
+    │       ├── geocoding.py
+    │       ├── overpass.py
+    │       └── site_analyzer.py
+    ├── frontend/
+    │   ├── index.html
+    │   ├── script.js
+    │   ├── style.css
+    │   └── assets/
+    ├── .env.example
+    ├── requirements.txt
+    ├── toggle_localhost.bat
+    └── README.md
 ```
 
----
+## Pré-Requisitos
 
-# Instalação
+- Windows, Linux ou macOS.
+- Python 3.11 ou superior instalado.
+- Acesso à internet para consultas ao OpenStreetMap, Overpass API e Nominatim.
+- Navegador moderno com suporte a JavaScript.
 
-## Clone o projeto
+## Instalação e Configuração
 
-```bash
-git clone https://github.com/seu-usuario/local-rush.git
-```
+Entre na pasta da aplicação:
 
 ```bash
 cd local-rush
 ```
 
----
-
-## Crie o ambiente virtual
-
-### Linux/macOS
+Crie o ambiente virtual:
 
 ```bash
-python3 -m venv venv
+py -3 -m venv .venv
 ```
+
+Ative o ambiente virtual no Windows:
 
 ```bash
-source venv/bin/activate
+.\.venv\Scripts\activate
 ```
 
-### Windows
+No Linux/macOS:
 
 ```bash
-python -m venv venv
+source .venv/bin/activate
 ```
 
-```bash
-venv\Scripts\activate
-```
-
----
-
-## Instale as dependências
+Instale as dependências:
 
 ```bash
 pip install -r requirements.txt
 ```
----
-# Iniciar/Desligar Localhost
-Existe um arquivo.bat "toggle_localhost" apenas executar que será ligado;
-Caso já esteja ligado esse mesmo bat desliga o localhost;
 
----
-
-# Configuração
-
-Crie um arquivo `.env` baseado no `.env.example`.
-
-## .env.example
-
-```env
-OVERPASS_URL=https://overpass-api.de/api/interpreter
-OVERPASS_TIMEOUT=25
-
-APP_HOST=127.0.0.1
-APP_PORT=8000
-```
-
----
-
-# Como Rodar
+Crie o arquivo `.env` com base no exemplo:
 
 ```bash
-uvicorn backend.app:app --reload
+copy .env.example .env
 ```
 
-Abra no navegador:
+No Linux/macOS:
 
-```txt
+```bash
+cp .env.example .env
+```
+
+Configurações disponíveis:
+
+```env
+OVERPASS_TIMEOUT_SECONDS=25
+OVERPASS_USER_AGENT=LocalRush/0.1 (localhost; contact:local@localhost)
+OVERPASS_REFERER=http://localhost
+OVERPASS_RETRIES=2
+OVERPASS_ENDPOINTS=https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter
+GEOCODING_TIMEOUT_SECONDS=20
+GEOCODING_USER_AGENT=LocalRush/0.1 (localhost; contact:local@localhost)
+GEOCODING_REFERER=http://localhost
+GEOCODING_RETRIES=2
+```
+
+## Rodando Localmente
+
+Com o ambiente virtual ativo, execute:
+
+```bash
+uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Acesse:
+
+```text
 http://127.0.0.1:8000
 ```
 
----
+No Windows, também é possível usar:
 
-# API
-
-## Endpoint
-
-```http
-POST /api/search
+```bash
+toggle_localhost.bat
 ```
 
----
+Esse script inicia o servidor se a porta `8000` estiver livre e encerra o processo se já houver um servidor escutando nessa porta.
 
-## Payload
+## Endpoints
+
+### Health Check
+
+```http
+GET /api/health
+```
+
+Retorna o status básico da aplicação e os timeouts configurados.
+
+### Geocoding
+
+```http
+POST /api/geocode
+Content-Type: application/json
+```
+
+Payload:
 
 ```json
 {
-  "latitude": -23.55052,
-  "longitude": -46.633308,
-  "radius": 3000,
-  "category": "restaurant",
-  "limit": 20,
-  "only_with_site": true
+  "query": "Centro, São Paulo"
 }
 ```
 
----
+### Busca de Empresas
 
-## Resposta
+```http
+POST /api/search
+Content-Type: application/json
+```
+
+Payload:
 
 ```json
-[
-  {
-    "name": "Restaurante Exemplo",
-    "category": "restaurant",
-    "address": "São Paulo",
-    "phone": "+551199999999",
-    "whatsapp": "551199999999",
-    "email": "contato@empresa.com",
-    "website": "https://empresa.com",
-    "maps_link": "https://maps.google.com/...",
-    "lat": -23.55,
-    "lng": -46.63,
-    "opening_hours": "08:00-18:00",
-    "opportunity_score": "Alta"
-  }
-]
+{
+  "lat": -23.55052,
+  "lng": -46.633308,
+  "radius": 1500,
+  "category": "restaurant",
+  "limit": 10,
+  "only_with_site": false
+}
 ```
 
----
+Categorias suportadas:
 
-# Sistema de Score
-
-| Score | Critério |
-|---|---|
-| Alta | Website + telefone + email |
-| Média | Website + telefone OU website + email |
-| Baixa | Sem website OU sem telefone/email |
-
----
-
-# Categorias Suportadas
-
-- barber
-- hairdresser
-- gym
-- clinic
-- restaurant
-- dentist
-- store
-- car_repair
-- real_estate
-- pharmacy
-- bakery
-- supermarket
-- cafe
-- hotel
-- school
-
----
-
-# Performance e Custos
-
-- Sem custos de API
-- Sem banco de dados
-- Sem infraestrutura cloud
-- Baixo consumo de memória
-- Execução local
-- Stack mínima
-- Dependências reduzidas
-
----
-
-# Decisões Técnicas
-
-- FastAPI pela simplicidade e performance
-- Vanilla JS para reduzir complexidade frontend
-- OpenStreetMap para evitar APIs pagas
-- Arquitetura local-first para facilitar testes
-- Sem banco para manter o MVP simples e rápido
-
----
-
-# Limitações da V1
-
-Esta versão não implementa:
-
-- autenticação
-- banco de dados
-- exportação CSV/Excel
-- paginação
-- cache local
-- análise automática de websites
-- geocoding por endereço
-- múltiplos usuários
-- deploy cloud
-- Docker
-
----
-
-# Roadmap V2
-
-- Exportação CSV
-- Sistema de favoritos
-- Cache local
-- Geocoding por endereço
-- Dashboard analítico
-- Histórico de buscas
-- Sistema de tags
-- Scoring avançado
-- Análise automática de websites
-- Deploy cloud
-
----
-
-# Git Ignore
-
-Arquivos protegidos:
-
-```txt
-.env
-venv/
-.venv/
-env/
-__pycache__/
-*.pyc
-.vscode/
-.idea/
+```text
+business_contact, restaurant, barber, hairdresser, gym, clinic, dentist,
+store, car_repair, real_estate, pharmacy, bakery, supermarket, cafe,
+hotel, school
 ```
 
----
+## Observações Operacionais
 
-# Licença
+- O projeto não usa banco de dados; histórico e favoritos ficam no `localStorage` do navegador.
+- A qualidade dos resultados depende dos dados públicos cadastrados no OpenStreetMap.
+- APIs públicas como Overpass e Nominatim podem aplicar rate limit ou instabilidade temporária.
+- Para produção, revise CORS, rate limiting, cache, logs estruturados e política de uso dos serviços externos.
 
-MIT License
+## Atribuição
 
----
+Dados fornecidos por OpenStreetMap contributors, licença ODbL.
 
-# Créditos
+## Licença
 
-Dados fornecidos por:
-
-© OpenStreetMap contributors
-
-Licença:
-ODbL — Open Database License
-
-https://www.openstreetmap.org/copyright
-
----
-
-# Objetivo do Projeto
-
-O foco do Local Rush é validar um sistema simples de prospecção comercial local usando exclusivamente ferramentas gratuitas e arquitetura mínima.
-
-O projeto prioriza:
-
-- velocidade de desenvolvimento;
-- baixo custo;
-- simplicidade operacional;
-- independência de APIs pagas;
-- facilidade de manutenção.
-
----
-
-# Autor
-
-Desenvolvido por Moreira Gabryel
-
-GitHub:
-https://github.com/MoreiraGabryel
+MIT.
