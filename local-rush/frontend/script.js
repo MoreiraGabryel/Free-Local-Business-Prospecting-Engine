@@ -281,9 +281,12 @@ function createCompanyCell(company) {
   return td;
 }
 
-function createCell(text) {
+function createCategoryCell(category) {
   const td = document.createElement("td");
-  td.textContent = text;
+  const tag = document.createElement("span");
+  tag.className = "category-chip";
+  tag.textContent = category;
+  td.appendChild(tag);
   return td;
 }
 
@@ -345,6 +348,9 @@ function createContactCell(company) {
 
 function createScoreCell(score) {
   const td = document.createElement("td");
+  td.className = "score-cell";
+  const wrapper = document.createElement("div");
+  wrapper.className = "score-stack";
   const badge = document.createElement("span");
   badge.className = "badge";
 
@@ -357,7 +363,19 @@ function createScoreCell(score) {
   }
 
   badge.textContent = score || "Baixa";
-  td.appendChild(badge);
+  const hint = document.createElement("span");
+  hint.className = "score-hint";
+  if (score === "Alta") {
+    hint.textContent = "Prioridade comercial";
+  } else if (score === "Média") {
+    hint.textContent = "Boa oportunidade";
+  } else {
+    hint.textContent = "Contato incompleto";
+  }
+
+  wrapper.appendChild(badge);
+  wrapper.appendChild(hint);
+  td.appendChild(wrapper);
   return td;
 }
 
@@ -374,7 +392,7 @@ function createMapCell(mapsLink) {
   link.href = mapsLink;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = "Abrir mapa";
+  link.textContent = "Ver no mapa";
   td.appendChild(link);
   return td;
 }
@@ -395,18 +413,6 @@ function createActionCell(company, isSaved) {
   }
 
   button.dataset.companyId = company.id;
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    handleSaveOrRemoveCompany(
-      company.id,
-      button.dataset.action || "save-company",
-      company,
-    );
-  });
-  button.addEventListener("pointerup", (event) => {
-    event.stopPropagation();
-  });
   td.appendChild(button);
   return td;
 }
@@ -431,22 +437,9 @@ function renderResults(results) {
     row.dataset.companyId = normalized.id;
     row.setAttribute("aria-selected", "false");
     row.tabIndex = 0;
-    row.addEventListener("click", (event) => {
-      if (event.target instanceof Element && event.target.closest("a,button")) {
-        return;
-      }
-      focusCompanyOnMap(normalized.id);
-    });
-    row.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-      event.preventDefault();
-      focusCompanyOnMap(normalized.id);
-    });
 
     row.appendChild(createCompanyCell(normalized));
-    row.appendChild(createCell(normalized.category));
+    row.appendChild(createCategoryCell(normalized.category));
     row.appendChild(createContactCell(normalized));
     row.appendChild(createScoreCell(normalized.opportunity_score));
     row.appendChild(createMapCell(normalized.maps_link));
@@ -1549,34 +1542,6 @@ function handleResultsKeydown(event) {
   focusCompanyOnMap(row.dataset.companyId || "");
 }
 
-function handleResultsCaptureClick(event) {
-  const target = event.target instanceof Element ? event.target : null;
-  if (!target || !resultsBody.contains(target)) {
-    return;
-  }
-
-  const button = target.closest("button[data-action]");
-  if (button) {
-    event.preventDefault();
-    event.stopPropagation();
-    handleSaveOrRemoveCompany(
-      button.dataset.companyId || "",
-      button.dataset.action || "save-company",
-    );
-    return;
-  }
-
-  if (target.closest("a")) {
-    return;
-  }
-
-  const row = target.closest("tr[data-company-id]");
-  if (row) {
-    event.stopPropagation();
-    focusCompanyOnMap(row.dataset.companyId || "");
-  }
-}
-
 function handleActivityClick(event) {
   const button = event.target.closest("button[data-action]");
   if (!button) {
@@ -1638,7 +1603,6 @@ if (locationQueryInput) {
 }
 resultsBody.addEventListener("click", handleResultsClick);
 resultsBody.addEventListener("keydown", handleResultsKeydown);
-document.addEventListener("click", handleResultsCaptureClick, true);
 
 if (fitMapButton) {
   fitMapButton.addEventListener("click", fitMapToCurrentResults);
