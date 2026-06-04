@@ -15,13 +15,22 @@ const mapStatus = document.getElementById("map-status");
 const fitMapButton = document.getElementById("fit-map-button");
 const themeToggle = document.getElementById("theme-toggle");
 const themeToggleLabel = document.getElementById("theme-toggle-label");
+const viewEyebrow = document.getElementById("view-eyebrow");
+const viewTitle = document.getElementById("view-title");
+const viewSubtitle = document.getElementById("view-subtitle");
+const metricPrimary = document.getElementById("metric-primary");
+const metricPrimaryDetail = document.getElementById("metric-primary-detail");
+const metricSecondary = document.getElementById("metric-secondary");
+const metricSecondaryDetail = document.getElementById("metric-secondary-detail");
+const metricTertiary = document.getElementById("metric-tertiary");
+const metricTertiaryDetail = document.getElementById("metric-tertiary-detail");
 
 const historyList = document.getElementById("history-list");
 const recentList = document.getElementById("recent-list");
 const savedList = document.getElementById("saved-list");
 
 const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
-const activityCards = Array.from(document.querySelectorAll(".activity-card"));
+const viewPanels = Array.from(document.querySelectorAll(".view-panel"));
 
 const STORAGE_KEYS = {
   history: "localrush_history",
@@ -70,10 +79,53 @@ const RADIUS_LEVELS = {
 
 let searchMap = null;
 let mapLayerGroup = null;
-let mapInitRetries = 0;
 let currentMapBounds = null;
+let leafletLoadPromise = null;
 
-const MAX_MAP_INIT_RETRIES = 12;
+const LEAFLET_SCRIPT_SRC = "/static/assets/vendor/leaflet/leaflet.js";
+
+const VIEW_META = {
+  dashboard: {
+    eyebrow: "Dashboard",
+    title: "Prospeccao local com dados abertos",
+    subtitle: "Configure a busca, acompanhe o mapa e trabalhe os leads encontrados.",
+    metrics: [
+      ["Local-first", "Sem banco"],
+      ["Mapa vivo", "Leaflet lazy load"],
+      ["Zero API paga", "OSM"],
+    ],
+  },
+  history: {
+    eyebrow: "Historico",
+    title: "Buscas realizadas",
+    subtitle: "Revise filtros usados anteriormente sem misturar o dashboard principal.",
+    metrics: [
+      ["Filtros", "Recarregaveis"],
+      ["Storage", "Local"],
+      ["Contexto", "Por busca"],
+    ],
+  },
+  recent: {
+    eyebrow: "Recentes",
+    title: "Empresas encontradas recentemente",
+    subtitle: "Lista isolada dos leads vistos nas ultimas buscas.",
+    metrics: [
+      ["Leads", "Recentes"],
+      ["Acao rapida", "Salvar"],
+      ["Mapa", "Link direto"],
+    ],
+  },
+  saved: {
+    eyebrow: "Salvas",
+    title: "Empresas salvas",
+    subtitle: "Area dedicada para leads priorizados e persistidos neste navegador.",
+    metrics: [
+      ["Favoritos", "LocalStorage"],
+      ["Acao", "Remover"],
+      ["Consulta", "Persistente"],
+    ],
+  },
+};
 
 function getStoredTheme() {
   try {
@@ -99,7 +151,10 @@ function getPreferredTheme() {
 
 function applyTheme(theme, persist = false) {
   const nextTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
   document.body.dataset.theme = nextTheme;
+  document.body.classList.toggle("theme-light", nextTheme === "light");
+  document.body.classList.toggle("theme-dark", nextTheme === "dark");
 
   if (themeToggleLabel) {
     themeToggleLabel.textContent = nextTheme === "light" ? "Tema escuro" : "Tema claro";
@@ -127,6 +182,69 @@ function toggleTheme() {
       searchMap.invalidateSize();
     }, 80);
   }
+}
+
+function loadLeaflet() {
+  if (window.L && typeof window.L.map === "function") {
+    return Promise.resolve();
+  }
+
+  if (leafletLoadPromise) {
+    return leafletLoadPromise;
+  }
+
+  leafletLoadPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector(`script[src="${LEAFLET_SCRIPT_SRC}"]`);
+    if (existingScript) {
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = LEAFLET_SCRIPT_SRC;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Leaflet indisponivel."));
+    document.head.appendChild(script);
+  });
+
+  return leafletLoadPromise;
+}
+
+function updateViewHeader(viewName) {
+  const meta = VIEW_META[viewName] || VIEW_META.dashboard;
+  const metrics = meta.metrics || VIEW_META.dashboard.metrics;
+
+  if (viewEyebrow) {
+    viewEyebrow.textContent = meta.eyebrow;
+  }
+  if (viewTitle) {
+    viewTitle.textContent = meta.title;
+  }
+  if (viewSubtitle) {
+    viewSubtitle.textContent = meta.subtitle;
+  }
+
+  const metricNodes = [
+    [metricPrimary, metricPrimaryDetail],
+    [metricSecondary, metricSecondaryDetail],
+    [metricTertiary, metricTertiaryDetail],
+  ];
+
+  metricNodes.forEach(([titleNode, detailNode], index) => {
+    const [title, detail] = metrics[index] || ["-", "-"];
+    if (titleNode) {
+      titleNode.textContent = title;
+    }
+    if (detailNode) {
+      detailNode.textContent = detail;
+    }
+  });
+}
+
+function normalizeViewName(tabName) {
+  return tabName === "search" ? "dashboard" : tabName || "dashboard";
 }
 
 function readList(key) {
@@ -713,12 +831,30 @@ function clearLocalData() {
 }
 
 function activateTab(tabName) {
+  const viewName = normalizeViewName(tabName);
+
   for (const button of tabButtons) {
-    button.classList.toggle("is-active", button.dataset.tab === tabName);
+    const buttonView = normalizeViewName(button.dataset.tab);
+    const isActive = buttonView === viewName;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
   }
 
-  for (const card of activityCards) {
-    card.classList.toggle("is-active", card.dataset.list === tabName);
+  for (const panel of viewPanels) {
+    const isActive = panel.dataset.view === viewName;
+    panel.classList.toggle("is-active", isActive);
+    panel.hidden = !isActive;
+  }
+
+  updateViewHeader(viewName);
+
+  if (viewName === "dashboard") {
+    initMap();
+    setTimeout(() => {
+      if (searchMap) {
+        searchMap.invalidateSize();
+      }
+    }, 120);
   }
 }
 
@@ -1090,7 +1226,7 @@ function updateMapFromFormSelection() {
   );
 }
 
-function initMap() {
+async function initMap() {
   if (!mapContainer) {
     return;
   }
@@ -1100,15 +1236,12 @@ function initMap() {
 
   if (!window.L || typeof window.L.map !== "function") {
     setMapModeFallback(true);
-    mapInitRetries += 1;
-    if (mapInitRetries <= MAX_MAP_INIT_RETRIES) {
-      setTimeout(() => {
-        initMap();
-      }, 350);
-    } else {
-      console.warn("[local-rush] Leaflet indisponivel; usando pre-visualizacao do mapa.");
+    try {
+      await loadLeaflet();
+    } catch (error) {
+      console.warn("[local-rush] Leaflet indisponivel; usando pre-visualizacao do mapa.", error);
+      return;
     }
-    return;
   }
 
   if (searchMap) {
@@ -1560,7 +1693,7 @@ function handleActivityClick(event) {
       setFieldValue("location_query", label);
       setError("");
       setStatus(`Localização rápida aplicada: ${label}.`);
-      activateTab("search");
+      activateTab("dashboard");
     }
     return;
   }
@@ -1579,7 +1712,7 @@ function handleActivityClick(event) {
     const index = Number(button.dataset.historyIndex);
     if (Number.isInteger(index) && index >= 0) {
       loadHistoryPayload(index);
-      activateTab("search");
+      activateTab("dashboard");
     }
     return;
   }
@@ -1639,10 +1772,10 @@ if (activityPanel) {
 
 for (const button of tabButtons) {
   button.addEventListener("click", () => {
-    const nextTab = button.dataset.tab || "search";
+    const nextTab = button.dataset.tab || "dashboard";
     activateTab(nextTab);
 
-    if (nextTab === "search") {
+    if (normalizeViewName(nextTab) === "dashboard") {
       const locationField = form.elements.namedItem("location_query");
       if (locationField instanceof HTMLInputElement) {
         locationField.focus();
@@ -1652,9 +1785,8 @@ for (const button of tabButtons) {
 }
 
 applyTheme(getPreferredTheme());
-activateTab("search");
+activateTab("dashboard");
 refreshActivityLists();
-initMap();
 
 window.addEventListener("resize", () => {
   ensureMapShellHeight();

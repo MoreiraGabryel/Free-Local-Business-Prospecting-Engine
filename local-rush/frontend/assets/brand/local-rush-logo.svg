@@ -1,0 +1,19 @@
+<svg width="304" height="80" viewBox="0 0 304 80" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Local Rush logo</title>
+  <desc id="desc">Local Rush wordmark with map radar symbol.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="10" y1="8" x2="66" y2="72" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8FF68"/>
+      <stop offset="0.48" stop-color="#58F4E4"/>
+      <stop offset="1" stop-color="#0B9C96"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="72" height="72" rx="22" fill="#061115"/>
+  <rect x="4.75" y="4.75" width="70.5" height="70.5" rx="21.25" stroke="#8CFBF1" stroke-opacity="0.34" stroke-width="1.5"/>
+  <path d="M40 13C28.402 13 19 22.054 19 33.223C19 47.105 35.05 61.915 39.197 65.524C39.659 65.927 40.341 65.927 40.803 65.524C44.95 61.915 61 47.105 61 33.223C61 22.054 51.598 13 40 13Z" fill="url(#markGradient)"/>
+  <path d="M40 23C33.925 23 29 27.925 29 34C29 40.075 33.925 45 40 45C46.075 45 51 40.075 51 34C51 27.925 46.075 23 40 23ZM40 29C42.761 29 45 31.239 45 34C45 36.761 42.761 39 40 39C37.239 39 35 36.761 35 34C35 31.239 37.239 29 40 29Z" fill="#061115"/>
+  <path d="M16 53C23.4 47.4 30.187 45.067 36.36 46C42.533 46.933 47.867 50.6 52.36 49.6C56.853 48.6 60.733 46.467 64 43.2" stroke="#061115" stroke-width="4.8" stroke-linecap="round"/>
+  <path d="M16 53C23.4 47.4 30.187 45.067 36.36 46C42.533 46.933 47.867 50.6 52.36 49.6C56.853 48.6 60.733 46.467 64 43.2" stroke="#B8FF68" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="96" y="36" fill="#F3FBFA" font-family="Inter, Manrope, Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="-0.2">Local Rush</text>
+  <text x="97" y="58" fill="#8CFBF1" font-family="Inter, Manrope, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2.2">LOCAL LEAD INTELLIGENCE</text>
+</svg>
