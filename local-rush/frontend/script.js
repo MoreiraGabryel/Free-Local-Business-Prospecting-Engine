@@ -355,13 +355,19 @@ function normalizeCompany(rawCompany) {
     name: safeName,
     category: safeCategory,
     address: String(rawCompany.address || "Endereço não informado").trim() || "Endereço não informado",
+    city: String(rawCompany.city || "").trim(),
+    district: String(rawCompany.district || "").trim(),
     phone: String(rawCompany.phone || "").trim(),
     whatsapp: String(rawCompany.whatsapp || "").trim(),
     email: String(rawCompany.email || "").trim(),
     website: safeExternalUrl(rawCompany.website),
+    instagram: String(rawCompany.instagram || "").trim(),
     maps_link: safeExternalUrl(rawCompany.maps_link),
     opening_hours: String(rawCompany.opening_hours || "").trim(),
     opportunity_score: String(rawCompany.opportunity_score || "Baixa").trim() || "Baixa",
+    source: String(rawCompany.source || "").trim(),
+    external_id: String(rawCompany.external_id || "").trim(),
+    saved: Boolean(rawCompany.saved),
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
   };
@@ -644,6 +650,28 @@ function removeSavedCompany(companyId) {
 
   writeList(STORAGE_KEYS.saved, filtered);
   return true;
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function persistSavedCompany(company) {
+  if (!company || !isUuid(company.id)) {
+    return;
+  }
+
+  fetch(`/api/leads/${encodeURIComponent(company.id)}/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  }).catch((error) => {
+    console.warn("[local-rush] Falha ao marcar lead como salvo no backend:", error);
+  });
 }
 
 function saveHistoryEntry(payload, total) {
@@ -1475,6 +1503,7 @@ function handleSaveOrRemoveCompany(companyId, action, companyHint = null) {
 
   const inserted = upsertSavedCompany(company);
   if (inserted) {
+    persistSavedCompany(company);
     syncAfterSavedUpdate("Empresa salva com sucesso.");
   } else {
     setStatus("Essa empresa já está na lista de salvas.");
@@ -1565,6 +1594,9 @@ async function handleSubmit(event) {
     category: payload.category,
     limit: payload.limit,
     only_with_site: payload.only_with_site,
+    city: payload.location_query,
+    location_query: payload.location_query,
+    expanded_search: false,
   };
 
   if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) {
@@ -1573,7 +1605,7 @@ async function handleSubmit(event) {
   }
 
   setLoading(true);
-  setStatus("Consultando OpenStreetMap...");
+  setStatus("Consultando cache e OpenStreetMap quando necessario...");
 
   try {
     const response = await fetch("/api/search", {
@@ -1605,7 +1637,7 @@ async function handleSubmit(event) {
     );
 
     resultsCount.textContent = `${currentResults.length} empresa(s) encontrada(s).`;
-    setStatus("Busca concluída com sucesso.");
+    setStatus(data.cache_hit ? "Busca carregada do cache." : "Busca concluída com sucesso.");
 
     saveHistoryEntry(payload, currentResults.length);
     saveRecentEntries(currentResults);

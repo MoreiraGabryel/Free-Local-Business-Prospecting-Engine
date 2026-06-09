@@ -571,6 +571,17 @@ def _normalize_website(raw_website: str) -> str:
     return f"https://{raw_website}"
 
 
+def _extract_city(tags: dict[str, Any]) -> str:
+    return _first_non_empty(tags, ["addr:city", "addr:town", "addr:village"])
+
+
+def _extract_district(tags: dict[str, Any]) -> str:
+    return _first_non_empty(
+        tags,
+        ["addr:suburb", "addr:neighbourhood", "addr:district", "is_in:neighbourhood"],
+    )
+
+
 def _extract_coordinates(element: dict[str, Any]) -> tuple[float | None, float | None]:
     if element.get("type") == "node":
         lat = element.get("lat")
@@ -606,8 +617,12 @@ def _opportunity_result(
         _first_non_empty(tags, ["website", "contact:website", "url"])
     )
     phone = _first_non_empty(tags, ["phone", "contact:phone"])
+    instagram = _first_non_empty(tags, ["contact:instagram", "instagram"])
     email = _first_non_empty(tags, ["email", "contact:email"])
     whatsapp = _first_non_empty(tags, ["whatsapp", "contact:whatsapp"])
+    osm_type = str(element.get("type", "")).strip()
+    osm_id = str(element.get("id", "")).strip()
+    external_id = f"{osm_type}:{osm_id}" if osm_type and osm_id else ""
 
     opportunity_score = compute_opportunity_score(
         has_website=bool(website),
@@ -622,10 +637,13 @@ def _opportunity_result(
         "name": _first_non_empty(tags, ["name"]) or "Sem nome",
         "category": category,
         "address": _build_address(tags),
+        "city": _extract_city(tags),
+        "district": _extract_district(tags),
         "phone": phone,
         "whatsapp": whatsapp,
         "email": email,
         "website": website,
+        "instagram": instagram,
         "maps_link": (
             f"https://www.openstreetmap.org/?mlat={lat:.6f}&mlon={lng:.6f}&zoom=18"
         ),
@@ -633,6 +651,9 @@ def _opportunity_result(
         "lng": lng,
         "opening_hours": _first_non_empty(tags, ["opening_hours"]),
         "opportunity_score": opportunity_score,
+        "source": "osm",
+        "external_id": external_id,
+        "raw_data": element,
     }
 
 
